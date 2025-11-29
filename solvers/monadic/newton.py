@@ -30,9 +30,8 @@ class NewtonSolver(MonadicEquationSolver):
             step_size: float = DEFAULT_STEP_SIZE
     ):
         derivative = calculus.get_derivative_of(self.function, step_size)
-        iteration = 0
 
-        while iteration < max_iterations:
+        for iteration in range(max_iterations):
             function_value, derivative_value = self.function(guess), derivative(guess)
 
             if math.isclose(function_value, 0, abs_tol=tolerance):
@@ -43,7 +42,6 @@ class NewtonSolver(MonadicEquationSolver):
             step = NewtonStep(iteration, guess, function_value, derivative_value)
             self.trace.steps.append(step)
             guess -= function_value / derivative_value
-            iteration += 1
 
         self.trace.final_result = guess
         self.trace.has_converged = False
