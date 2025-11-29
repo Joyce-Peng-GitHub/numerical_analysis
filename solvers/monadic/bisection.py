@@ -1,10 +1,22 @@
-from solvers.monadic.interval import *
-from solvers.monadic.monadic_equation_solver import *
+import dataclasses
+import math
+
+from solvers.monadic.interval import Interval
+from solvers.monadic.monadic_equation_solver import UnaryFunction, MonadicEquationSolver
+from solvers.solution_trace import Step
+
+
+@dataclasses.dataclass
+class BisectionStep(Step):
+    left: float
+    right: float
+    middle: float
+    middle_function_value: float
 
 
 class BisectionSolver(MonadicEquationSolver):
-    def __init__(self, func: UnaryFunction | None = None):
-        super().__init__(func)
+    def __init__(self, function: UnaryFunction | None = None):
+        super().__init__(function)
 
     def solve(self, interval: Interval, tolerance: float) -> float:
         left, right = interval.left, interval.right
@@ -12,40 +24,45 @@ class BisectionSolver(MonadicEquationSolver):
         if not interval.is_finite():
             raise ValueError(f"Bisection requires a finite interval: got left={left:%r}, right={right:%r}")
 
-        function_left_value, function_right_value = self.function(left), self.function(right)
+        left_function_value, right_function_value = self.function(left), self.function(right)
 
-        # Initialize history
-        self.history.clear()
-        self.history.init = (left, right, function_left_value, function_right_value)
+        self.trace.clear()  # initialize solution trace
 
-        if interval.include_left and function_left_value == 0:
-            self.history.final = (left, right, function_left_value, function_right_value)
+        if interval.include_left and left_function_value == 0:
+            self.trace.final_result = left
+            self.trace.has_converged = True
             return left
-        if interval.include_right and function_right_value == 0:
-            self.history.final = (left, right, function_left_value, function_right_value)
+        if interval.include_right and right_function_value == 0:
+            self.trace.final_result = left
+            self.trace.has_converged = True
             return right
 
-        function_left_value_is_negative: bool = (function_left_value < 0)
-        if function_left_value_is_negative == (function_right_value < 0):
+        left_function_value_is_negative: bool = (left_function_value < 0)
+        if left_function_value_is_negative == (right_function_value < 0):
             raise ValueError(f"Function values at interval endpoints must have opposite signs: "
-                             f"f({left:%r})={function_left_value:%r}, f({right:%r})={function_right_value:%r}")
+                             f"f({left:%r})={left_function_value:%r}, f({right:%r})={right_function_value:%r}")
 
+        iteration = 0
         while right - left > tolerance:
             middle: float = (left + right) / 2
-            function_middle_value: float = self.function(middle)
-            function_middle_value_is_negative: bool = (function_middle_value < 0)
+            middle_function_value: float = self.function(middle)
+            middle_function_value_is_negative: bool = (middle_function_value < 0)
 
             # save step to history
-            self.history.steps.append((left, right, middle, function_middle_value))
+            step = BisectionStep(iteration, left, right, middle, middle_function_value)
+            self.trace.steps.append(step)
 
-            if math.isclose(function_middle_value, 0, abs_tol=tolerance):
+            if math.isclose(middle_function_value, 0, abs_tol=tolerance):
                 return middle
-            if function_middle_value_is_negative == function_left_value_is_negative:
+            if middle_function_value_is_negative == left_function_value_is_negative:
                 left = middle
-                function_left_value_is_negative = function_middle_value_is_negative
+                left_function_value_is_negative = middle_function_value_is_negative
             else:
                 right = middle
 
+            iteration += 1
+
         result = (left + right) / 2
-        self.history.final = (left, right, result, self.function(result))
+        self.trace.final_result = result
+        self.trace.has_converged = True
         return result
