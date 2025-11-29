@@ -1,13 +1,18 @@
+import math
+
 from solvers.monadic.bisection import BisectionSolver
 from solvers.monadic.interval import Interval
+from solvers.monadic.newton import NewtonSolver
 from visualizers.monadic.bisection_visualizer import BisectionVisualizer
+from visualizers.monadic.newton_visualizer import NewtonVisualizer
 
 
 def main():
-    f = lambda x: x ** 3 + 0.2 * x ** 2 + 5 * x - 1
-    solver = BisectionSolver(f)
-    solver.solve(Interval(-2, 2), 1e-3)
-    visualizer = BisectionVisualizer(solver)
+    f = lambda x: x - 2
+    solver = NewtonSolver(f)
+    root = solver.solve(guess=2.0, tolerance=1e-3, max_iterations=50)
+    print(root)
+    visualizer = NewtonVisualizer(solver)
     visualizer.animate()
 
 
