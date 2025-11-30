@@ -40,7 +40,7 @@ class BisectionSolver(MonadicEquationSolver):
         left_function_value_is_negative: bool = (left_function_value < 0)
         if left_function_value_is_negative == (right_function_value < 0):
             raise ValueError(f"Function values at interval endpoints must have opposite signs: "
-                             f"f({left:%r})={left_function_value:%r}, f({right:%r})={right_function_value:%r}")
+                             f"f({left:.6g})={left_function_value:.6g}, f({right:.6g})={right_function_value:.6g}")
 
         iteration = 0
         while right - left > tolerance:
@@ -53,6 +53,8 @@ class BisectionSolver(MonadicEquationSolver):
             self.trace.steps.append(step)
 
             if math.isclose(middle_function_value, 0, abs_tol=tolerance):
+                self.trace.final_result = middle
+                self.trace.has_converged = True
                 return middle
             if middle_function_value_is_negative == left_function_value_is_negative:
                 left = middle
