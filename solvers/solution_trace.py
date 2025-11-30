@@ -17,3 +17,10 @@ class SolutionTrace:
         self.steps.clear()
         self.final_result = None
         self.has_converged = False
+
+    def print(self):
+        print("Solution Trace:")
+        for step in self.steps:
+            print("\t", step, sep="")
+        print(f"Final Result: {self.final_result}")
+        print(f"Has Converged: {self.has_converged}")
