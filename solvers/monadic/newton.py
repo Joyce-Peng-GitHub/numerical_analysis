@@ -17,6 +17,8 @@ class NewtonStep(Step):
 
 class NewtonSolver(MonadicEquationSolver):
     DEFAULT_MAX_ITERATIONS = 128
+    # Epsilon for derivative to prevent division by zero
+    DERIVATIVE_TOLERANCE = 1e-15
 
     def __init__(self, function: UnaryFunction | None = None):
         super().__init__(function)
@@ -29,22 +31,42 @@ class NewtonSolver(MonadicEquationSolver):
             max_iterations: int = DEFAULT_MAX_ITERATIONS,
             step_size: float = DEFAULT_STEP_SIZE
     ):
+        self.trace.clear()
         derivative = calculus.get_derivative_of(self.function, step_size)
 
         for iteration in range(max_iterations):
-            function_value, derivative_value = self.function(guess), derivative(guess)
+            function_value = self.function(guess)
+            derivative_value = derivative(guess)
 
             if math.isclose(function_value, 0, abs_tol=tolerance):
                 self.trace.final_result = guess
                 self.trace.has_converged = True
                 return guess
 
-            step = NewtonStep(iteration, guess, function_value, derivative_value)
+            # Safety Check: Avoid Division by Zero
+            if math.isclose(derivative_value, 0, abs_tol=self.DERIVATIVE_TOLERANCE):
+                break
+
+            step = NewtonStep(
+                iteration=iteration,
+                guess=guess,
+                function_value=function_value,
+                derivative_value=derivative_value,
+            )
             self.trace.steps.append(step)
-            guess -= function_value / derivative_value
+
+            difference = -function_value / derivative_value
+            new_guess = guess + difference
+            if abs(difference) < tolerance:
+                self.trace.final_result = new_guess
+                self.trace.has_converged = True
+                return new_guess
+
+            guess = new_guess
 
         self.trace.final_result = guess
         self.trace.has_converged = False
         if raise_exception_if_no_convergence:
             raise MonadicEquationSolverNotConvergedException(self)
+
         return guess
