@@ -1,34 +1,34 @@
-import copy as cp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
 from typing import Tuple
 
-# Adjust imports based on your actual project structure
 from solvers.monadic.bisection import BisectionSolver
+from visualizers.monadic.monadic_equation_visualizer import MonadicEquationVisualizer
 
 
-class BisectionVisualizer:
-    DEFAULT_SAMPLE_NUM = 256
-    DEFAULT_FIGURE_SIZE = (16, 9)
-    DEFAULT_INTERVAL_MS = 1000
+class BisectionVisualizer(MonadicEquationVisualizer):
 
-    def __init__(self, solver: BisectionSolver):
-        self.solver = cp.deepcopy(solver)
+    # We can override defaults here if necessary, or just rely on the Base class.
+    # We do not need __init__ as it is inherited.
 
     def animate(
             self,
-            sample_num: int = DEFAULT_SAMPLE_NUM,
-            figure_size: Tuple[int, int] = DEFAULT_FIGURE_SIZE,
-            interval_ms: int = DEFAULT_INTERVAL_MS
+            sample_num: int = MonadicEquationVisualizer.DEFAULT_SAMPLE_NUM,
+            figure_size: Tuple[int, int] = MonadicEquationVisualizer.DEFAULT_FIGURE_SIZE,
+            tick_size: int = MonadicEquationVisualizer.DEFAULT_TICK_SIZE,
+            label_size: int = MonadicEquationVisualizer.DEFAULT_LABEL_SIZE,
+            title_size: int = MonadicEquationVisualizer.DEFAULT_TITLE_SIZE,
+            interval_ms: int = MonadicEquationVisualizer.DEFAULT_INTERVAL_MS
     ):
-        figure, (axes_global, axes_zoom) = plt.subplots(1, 2, figsize=figure_size)
-        figure.suptitle(f"Bisection Method: {len(self.solver.trace.steps)} Iterations", fontsize=14)
-
-        # --- 1. GLOBAL VIEW SETUP ---
         if len(self.solver.trace.steps) == 0:
             raise ValueError("Cannot visualize an empty trace.")
+
+        figure, (axes_global, axes_zoom) = plt.subplots(1, 2, figsize=figure_size)
+        figure.suptitle(f"Bisection Method: {len(self.solver.trace.steps)} Iterations", fontsize=title_size)
+
+        # --- 1. GLOBAL VIEW SETUP ---
         init_step = self.solver.trace.steps[0]
 
         # Determine global bounds based on the initial interval + 20% padding
@@ -42,7 +42,11 @@ class BisectionVisualizer:
 
         axes_global.plot(x_global, y_global, 'k-', alpha=0.3, label='f(x)')
         axes_global.axhline(0, color='black', linewidth=1)
-        axes_global.set_title("Global Context (Fixed View)")
+
+        # Apply styling
+        axes_global.set_title("Global Context (Fixed View)", fontsize=title_size)
+        axes_global.tick_params(labelsize=tick_size)
+        axes_global.set_xlabel("x", fontsize=label_size)
         axes_global.set_xlim(global_x_min, global_x_max)
         axes_global.set_ylim(y_global.min(), y_global.max())
 
@@ -51,8 +55,7 @@ class BisectionVisualizer:
         global_line_right = axes_global.axvline(init_step.right, color='red', alpha=0.5)
         global_mid_point, = axes_global.plot([], [], 'bo', markersize=4)
 
-        # The "Camera Box" (Purple Rectangle)
-        # Represents exactly what is seen in the right-hand plot
+        # The "Camera Box"
         zoom_rectangle = Rectangle((0, 0), 1, 1, fill=False, edgecolor='purple', linestyle='--', linewidth=2,
                                    label='Camera View')
         axes_global.add_patch(zoom_rectangle)
@@ -60,7 +63,11 @@ class BisectionVisualizer:
         # --- 2. ZOOM VIEW SETUP ---
         zoom_curve, = axes_zoom.plot([], [], 'b-', linewidth=2)
         axes_zoom.axhline(0, color='black', linewidth=1)
-        axes_zoom.set_title("Microscope View (Adaptive Zoom)")
+
+        # Apply styling
+        axes_zoom.set_title("Microscope View (Adaptive Zoom)", fontsize=title_size)
+        axes_zoom.tick_params(labelsize=tick_size)
+        axes_zoom.set_xlabel("x", fontsize=label_size)
 
         zoom_line_left = axes_zoom.axvline(0, color='green', linestyle='--', label='a (Left)')
         zoom_line_right = axes_zoom.axvline(0, color='red', linestyle='--', label='b (Right)')
@@ -68,29 +75,22 @@ class BisectionVisualizer:
 
         info_text = axes_zoom.text(0.02, 0.95, '', transform=axes_zoom.transAxes,
                                    verticalalignment='top',
-                                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9))
+                                   bbox=dict(boxstyle='round', facecolor='white', alpha=0.9),
+                                   fontsize=label_size)
 
         def update(frame):
             step = self.solver.trace.steps[frame]
             interval_width = step.right - step.left
 
-            # --- STEP A: CALCULATE ZOOM GEOMETRY FIRST ---
-            # We must know the "Zoom View" limits before we can draw the rectangle
-
-            # X-Limits: Interval +/- 50% padding
-            # This creates a "View Frame" centered on the interval
+            # --- STEP A: CALCULATE ZOOM GEOMETRY ---
             view_pad_x = interval_width * 0.5
             zoom_x_min = step.left - view_pad_x
             zoom_x_max = step.right + view_pad_x
 
-            # Generate Y-Data for this specific X-Range
             x_zoom = np.linspace(zoom_x_min, zoom_x_max, 200)
             y_zoom = np.array([self.solver.function(x) for x in x_zoom])
 
-            # Y-Limits: Min/Max of the curve segment +/- 20% padding
             y_min_raw, y_max_raw = y_zoom.min(), y_zoom.max()
-
-            # Safety for flat lines
             if y_max_raw == y_min_raw:
                 y_max_raw += 1.0
                 y_min_raw -= 1.0
@@ -101,18 +101,16 @@ class BisectionVisualizer:
             zoom_y_min = y_min_raw - view_pad_y
             zoom_y_max = y_max_raw + view_pad_y
 
-            # --- STEP B: UPDATE GLOBAL VIEW (The Rectangle) ---
+            # --- STEP B: UPDATE GLOBAL VIEW ---
             global_line_left.set_xdata([step.left, step.left])
             global_line_right.set_xdata([step.right, step.right])
             global_mid_point.set_data([step.middle], [step.middle_function_value])
 
-            # ERROR FIX: Set bounds using the calculated ZOOM limits (both X and Y)
             rect_width = zoom_x_max - zoom_x_min
             rect_height = zoom_y_max - zoom_y_min
             zoom_rectangle.set_bounds(zoom_x_min, zoom_y_min, rect_width, rect_height)
 
             # --- STEP C: UPDATE ZOOM VIEW ---
-            # Now we just apply the limits we calculated in Step A
             axes_zoom.set_xlim(zoom_x_min, zoom_x_max)
             axes_zoom.set_ylim(zoom_y_min, zoom_y_max)
 

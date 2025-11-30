@@ -1,33 +1,24 @@
-import copy as cp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
-from typing import Tuple
+from typing import Tuple, override
 
-# Adjust imports based on your actual project structure
 from solvers.monadic.newton_downhill import NewtonDownhillSolver
+from visualizers.monadic.monadic_equation_visualizer import MonadicEquationVisualizer
 
 
-class NewtonDownhillVisualizer:
-    DEFAULT_SAMPLE_NUM = 256
-    DEFAULT_FIGURE_SIZE = (16, 9)
-    DEFAULT_TICK_SIZE = 12
-    DEFAULT_LABEL_SIZE = 16
-    DEFAULT_TITLE_SIZE = 20
-    DEFAULT_INTERVAL_MS = 1000
+class NewtonDownhillVisualizer(MonadicEquationVisualizer):
 
-    def __init__(self, solver: NewtonDownhillSolver):
-        self.solver = cp.deepcopy(solver)
-
+    @override
     def animate(
             self,
-            sample_num: int = DEFAULT_SAMPLE_NUM,
-            figure_size: Tuple[int, int] = DEFAULT_FIGURE_SIZE,
-            tick_size: int = DEFAULT_TICK_SIZE,
-            label_size: int = DEFAULT_LABEL_SIZE,
-            title_size: int = DEFAULT_TITLE_SIZE,
-            interval_ms: int = DEFAULT_INTERVAL_MS
+            sample_num: int = MonadicEquationVisualizer.DEFAULT_SAMPLE_NUM,
+            figure_size: Tuple[int, int] = MonadicEquationVisualizer.DEFAULT_FIGURE_SIZE,
+            tick_size: int = MonadicEquationVisualizer.DEFAULT_TICK_SIZE,
+            label_size: int = MonadicEquationVisualizer.DEFAULT_LABEL_SIZE,
+            title_size: int = MonadicEquationVisualizer.DEFAULT_TITLE_SIZE,
+            interval_ms: int = MonadicEquationVisualizer.DEFAULT_INTERVAL_MS
     ):
         if len(self.solver.trace.steps) == 0:
             raise ValueError("Cannot visualize an empty trace.")
@@ -36,12 +27,10 @@ class NewtonDownhillVisualizer:
         figure.suptitle(f"Newton Downhill Method: {len(self.solver.trace.steps)} Iterations", fontsize=title_size)
 
         # --- 1. GLOBAL VIEW SETUP ---
-        # We need to scan all steps to find the global bounds.
         # Unlike standard Newton, we have 'x' and the calculated 'next' which depends on damping.
         all_x_points = []
         for step in self.solver.trace.steps:
             all_x_points.append(step.x)
-            # Calculate where this step went
             if step.x_derivative_value != 0:
                 # next = x - f(x) / (damping * f'(x))
                 next_val = step.x - (step.x_function_value / (step.damping_factor * step.x_derivative_value))
@@ -60,6 +49,8 @@ class NewtonDownhillVisualizer:
 
         axes_global.plot(x_global, y_global, "k-", alpha=0.3, label=r"f(x)")
         axes_global.axhline(0, color="black", linewidth=1)
+
+        # Styling
         axes_global.set_title("Global Context", fontsize=title_size)
         axes_global.tick_params(labelsize=tick_size)
         axes_global.set_xlabel(r"$x$", loc="center", fontsize=label_size)
@@ -86,19 +77,10 @@ class NewtonDownhillVisualizer:
         axes_zoom.tick_params(labelsize=tick_size)
         axes_zoom.set_xlabel(r"$x$", loc="center", fontsize=label_size)
 
-        # Visual Elements:
         vline_current = axes_zoom.axvline(0, color="green", linestyle=":", alpha=0.5)
-
-        # The Tangent Line (Represents the full, undamped Newton vector)
         tangent_line, = axes_zoom.plot([], [], "r--", linewidth=1.5, alpha=0.4, label="Tangent (Undamped)")
-
-        # Points
         point_current, = axes_zoom.plot([], [], "go", markersize=8, zorder=5, label=r"$(x_n, f(x_n))$")
-
-        # Ghost Point: Where standard Newton WOULD have gone (damping = 1)
         point_ghost, = axes_zoom.plot([], [], "rx", markersize=6, alpha=0.4, label=r"Standard Newton")
-
-        # Actual Point: Where we actually went (damping >= 1)
         point_next, = axes_zoom.plot([], [], "rx", markersize=8, markeredgewidth=2, zorder=5,
                                      label=r"Actual ($x_{n+1}$)")
 
@@ -121,11 +103,9 @@ class NewtonDownhillVisualizer:
             if step.x_derivative_value == 0:
                 actual_next = step.x
             else:
-                # Formula: x - f(x) / (damping * f'(x))
                 actual_next = step.x - (step.x_function_value / (step.damping_factor * step.x_derivative_value))
 
             # --- STEP A: CALCULATE ZOOM GEOMETRY ---
-            # Focus bounds must include: Current X, Undamped Target, and Actual Target
             points_of_interest = [step.x, undamped_next, actual_next]
             focus_x_min = min(points_of_interest)
             focus_x_max = max(points_of_interest)
@@ -137,11 +117,9 @@ class NewtonDownhillVisualizer:
             zoom_x_min = focus_x_min - view_pad_x
             zoom_x_max = focus_x_max + view_pad_x
 
-            # Generate Y-Data for Zoom
             x_zoom = np.linspace(zoom_x_min, zoom_x_max, 200)
             y_zoom = np.array([self.solver.function(x) for x in x_zoom])
 
-            # Y-Limits: Must include 0 (axis) and f(x_current)
             focus_y_vals = [0, step.x_function_value]
             y_min_raw, y_max_raw = min(focus_y_vals), max(focus_y_vals)
             y_range = y_max_raw - y_min_raw
@@ -164,18 +142,14 @@ class NewtonDownhillVisualizer:
             axes_zoom.set_ylim(zoom_y_min, zoom_y_max)
 
             zoom_curve.set_data(x_zoom, y_zoom)
-
-            # Vertical Line (Current Guess)
             vline_current.set_xdata([step.x, step.x])
 
-            # Tangent Line: ALWAYS draw the full tangent to the Undamped intercept
-            # This visually explains "Where we wanted to go" vs "Where we went"
+            # Draw full tangent to the Undamped intercept to show "Where we wanted to go"
             tangent_line.set_data([step.x, undamped_next], [step.x_function_value, 0])
 
-            # Points
             point_current.set_data([step.x], [step.x_function_value])
-            point_ghost.set_data([undamped_next], [0])  # The faint "if we didn't damp" point
-            point_next.set_data([actual_next], [0])  # The actual "damped" point
+            point_ghost.set_data([undamped_next], [0])
+            point_next.set_data([actual_next], [0])
 
             info_text.set_text(
                 rf"$n={step.iteration}$""\n"

@@ -1,33 +1,24 @@
-import copy as cp
 import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.animation import FuncAnimation
 from matplotlib.patches import Rectangle
-from typing import Tuple
+from typing import Tuple, override
 
-# Adjust imports based on your actual project structure
 from solvers.monadic.newton import NewtonSolver
+from visualizers.monadic.monadic_equation_visualizer import MonadicEquationVisualizer
 
 
-class NewtonVisualizer:
-    DEFAULT_SAMPLE_NUM = 256
-    DEFAULT_FIGURE_SIZE = (16, 9)
-    DEFAULT_TICK_SIZE = 12
-    DEFAULT_LABEL_SIZE = 16
-    DEFAULT_TITLE_SIZE = 20
-    DEFAULT_INTERVAL_MS = 1000
+class NewtonVisualizer(MonadicEquationVisualizer):
 
-    def __init__(self, solver: NewtonSolver):
-        self.solver = cp.deepcopy(solver)
-
+    @override
     def animate(
             self,
-            sample_num: int = DEFAULT_SAMPLE_NUM,
-            figure_size: Tuple[int, int] = DEFAULT_FIGURE_SIZE,
-            tick_size: int = DEFAULT_TICK_SIZE,
-            label_size: int = DEFAULT_LABEL_SIZE,
-            title_size: int = DEFAULT_TITLE_SIZE,
-            interval_ms: int = DEFAULT_INTERVAL_MS
+            sample_num: int = MonadicEquationVisualizer.DEFAULT_SAMPLE_NUM,
+            figure_size: Tuple[int, int] = MonadicEquationVisualizer.DEFAULT_FIGURE_SIZE,
+            tick_size: int = MonadicEquationVisualizer.DEFAULT_TICK_SIZE,
+            label_size: int = MonadicEquationVisualizer.DEFAULT_LABEL_SIZE,
+            title_size: int = MonadicEquationVisualizer.DEFAULT_TITLE_SIZE,
+            interval_ms: int = MonadicEquationVisualizer.DEFAULT_INTERVAL_MS
     ):
         if len(self.solver.trace.steps) == 0:
             raise ValueError("Cannot visualize an empty trace.")
@@ -36,7 +27,7 @@ class NewtonVisualizer:
         figure.suptitle(f"Newton's Method: {len(self.solver.trace.steps)} Iterations", fontsize=title_size)
 
         # --- 1. GLOBAL VIEW SETUP ---
-        # Newton"s method can jump wildly. We must scan ALL steps to find the true Global Bounds.
+        # Scan ALL steps to find the true Global Bounds.
         all_guesses = [s.guess for s in self.solver.trace.steps]
         # Include the final calculated "next" guess of the last step
         last_step = self.solver.trace.steps[-1]
@@ -58,6 +49,8 @@ class NewtonVisualizer:
 
         axes_global.plot(x_global, y_global, "k-", alpha=0.3, label=r"f(x)")
         axes_global.axhline(0, color="black", linewidth=1)
+
+        # Styling
         axes_global.set_title("Global Context (Fixed View)", fontsize=title_size)
         axes_global.tick_params(labelsize=tick_size)
         axes_global.set_xlabel(r"$x$", loc="center", fontsize=label_size)
@@ -85,11 +78,8 @@ class NewtonVisualizer:
         axes_zoom.set_xlabel(r"$x$", loc="center", fontsize=label_size)
 
         # Visual Elements for Newton:
-        # 1. Vertical line from x to f(x)
         vline_current = axes_zoom.axvline(0, color="green", linestyle=":", alpha=0.5)
-        # 2. The Tangent Line
         tangent_line, = axes_zoom.plot([], [], "r--", linewidth=1.5, label="Tangent")
-        # 3. The points
         point_current, = axes_zoom.plot([], [], "go", markersize=8, zorder=5, label=r"$(x_n, f(x_n))$")
         point_next, = axes_zoom.plot([], [], "rx", markersize=8, zorder=5, label=r"$x^{{(n+1)}}$")
 
@@ -102,36 +92,32 @@ class NewtonVisualizer:
         def update(frame):
             step = self.solver.trace.steps[frame]
 
-            # Newton Logic: x_new = x - f(x)/f"(x)
+            # Newton Logic: x_new = x - f(x)/f'(x)
             if step.derivative_value == 0:
-                # Avoid division by zero in visualization logic, though solver handles it/crashes
                 x_next = step.guess
             else:
                 x_next = step.guess - (step.function_value / step.derivative_value)
 
             # --- STEP A: CALCULATE ZOOM GEOMETRY ---
-            # We need to see the current point AND the intercept (next point)
             focus_x_min = min(step.guess, x_next)
             focus_x_max = max(step.guess, x_next)
             dist = focus_x_max - focus_x_min
 
-            if dist == 0: dist = 0.1  # Safety
+            if dist == 0: dist = 0.1
 
             view_pad_x = dist * 0.5
             zoom_x_min = focus_x_min - view_pad_x
             zoom_x_max = focus_x_max + view_pad_x
 
-            # Generate Y-Data for Zoom
             x_zoom = np.linspace(zoom_x_min, zoom_x_max, 200)
             y_zoom = np.array([self.solver.function(x) for x in x_zoom])
 
-            # Y-Limits: Must include 0 (axis) and f(x_current)
             focus_y_vals = [0, step.function_value]
             y_min_raw, y_max_raw = min(focus_y_vals), max(focus_y_vals)
             y_range = y_max_raw - y_min_raw
             if y_range == 0: y_range = 1.0
 
-            view_pad_y = y_range * 0.4  # More padding on Y to see the tangent clearly
+            view_pad_y = y_range * 0.4
             zoom_y_min = y_min_raw - view_pad_y
             zoom_y_max = y_max_raw + view_pad_y
 
@@ -148,14 +134,8 @@ class NewtonVisualizer:
             axes_zoom.set_ylim(zoom_y_min, zoom_y_max)
 
             zoom_curve.set_data(x_zoom, y_zoom)
-
-            # Update Vertical Line (Current Guess)
             vline_current.set_xdata([step.guess, step.guess])
-
-            # Update Tangent Line: Connects (x_curr, f_curr) -> (x_next, 0)
             tangent_line.set_data([step.guess, x_next], [step.function_value, 0])
-
-            # Update Points
             point_current.set_data([step.guess], [step.function_value])
             point_next.set_data([x_next], [0])
 
