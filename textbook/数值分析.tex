@@ -1,0 +1,1999 @@
+\documentclass[UTF8]{ctexbook}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+% \usepackage{ctex}
+\usepackage{float}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,hidelinks,unicode]{hyperref}
+\usepackage{minted}
+\usepackage{fancyhdr}
+
+\usepackage[a4paper,margin=2cm]{geometry}
+\newcommand{\ssection}[1]{\section*{#1}\phantomsection\addcontentsline{toc}{section}{#1}}
+\newcommand{\ssubsection}[1]{\subsection*{#1}\phantomsection\addcontentsline{toc}{subsection}{#1}}
+\newcommand{\ssubsubsection}[1]{\subsubsection*{#1}\phantomsection\addcontentsline{toc}{subsubsection}{#1}}
+
+% \newtheorem{definition}{Definition}[section]
+% \newtheorem{lemma}{Lemma}[section]
+% \newtheorem{theorem}{Theorem}[section]
+% \newtheorem{proof}{Proof}[section]
+\newtheorem{definition}{定义}[section]
+\newtheorem{lemma}{引理}[section]
+\newtheorem{theorem}{定理}[section]
+\newtheorem{proof}{证明}[section]
+
+\def\diff{\mathop{}\hphantom{\mskip-\thinmuskip}\mathrm{d}}%
+\let\daccent\d
+\let\d\relax
+\newcommand\d{\ifmmode\diff\else\expandafter\daccent\fi}
+
+\newcommand{\sgn}{\mathop{\mathrm{sgn}}}
+
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\F}{\mathbb{F}}
+
+\newcommand{\powset}{\mathop{\mathscr{P}}}
+\newcommand{\ran}{\mathop{\mathrm{ran}}}
+\newcommand{\dom}{\mathop{\mathrm{dom}}}
+\newcommand{\card}{\mathop{\mathrm{card}}}
+
+\newcommand{\tr}{\mathop{\mathrm{tr}}}
+\newcommand{\diag}{\mathop{\mathrm{diag}}}
+
+\setmonofont{Ubuntu Mono}
+\usemintedstyle{borland}
+\setminted{tabsize=4}
+\setminted{linenos=true, numbersep=5pt}
+\setminted{bgcolor=gray!12}
+\renewcommand{\theFancyVerbLine}{\small\ttfamily\arabic{FancyVerbLine}}
+
+% \pagestyle{empty}
+
+\title{数值分析}
+\author{蓬蒿人}
+
+\begin{document}
+
+% % Configure a page style that prints "0" on preliminary pages while leaving
+% % the internal page counter unchanged (so TOC entries record correct numbers).
+% \newif\ifprelim
+% \prelimtrue
+% \pagestyle{fancy}
+% \fancyhf{}
+% % Center footer: show 0 on prelim pages, otherwise the real page number
+% \fancyfoot[C]{\ifprelim 0\else\thepage\fi}
+% % Make the plain page style (used by \maketitle and some chapter/section pages)
+% % behave the same as the current fancy style so the title page prints 0 too.
+% \fancypagestyle{plain}{%
+% 	\fancyhf{}%
+% 	\fancyfoot[C]{\ifprelim 0\else\thepage\fi}%
+% 	\renewcommand{\headrulewidth}{0pt}%
+% 	\renewcommand{\footrulewidth}{0pt}%
+% }
+
+\maketitle
+\tableofcontents
+% \clearpage
+% End prelim pages: restore normal printed page numbers and start main pages at 1
+% \prelimfalse
+% \setcounter{page}{1}
+
+\chapter{数值计算中的误差}
+\section{计数与数值}
+不讲。
+
+\section{舍入方法与有效数字}
+\subsection{绝对误差与相对误差}
+\begin{definition}
+	设$a$为精确值，
+	$\hat{a}$为近似值，
+	定义它们之差
+	$$
+		\Delta a=\hat{a}-a
+	$$
+	为近似值$\hat{a}$的绝对误差，
+	简称误差。
+\end{definition}
+
+由于精确值一般是未知的，
+因而$\d a$不能求出来，
+但如果根据测量误差或计算的情况可以估计出其绝对值的上界
+$$
+	\varepsilon>\lvert\d a\rvert,
+$$
+则称$\varepsilon$为$\hat{a}$的\textit{(绝对)误差限}。
+由此界定的精确值的范围为
+$$
+	\hat{a}-\varepsilon<a<\hat{a}+\varepsilon,
+$$
+有时也记作
+$$
+	a=\hat{a}\pm\varepsilon.
+$$
+
+\begin{definition}
+	相对误差定义为绝对误差与精确值之比
+	$$
+		\delta a=\frac{\Delta a}{a}.
+	$$
+\end{definition}
+因精确值$a$一般不知道，
+实际计算时采用
+$$
+	\delta a\approx\frac{\Delta a}{\hat{a}}
+$$
+来代替。
+这样代替后，
+相对误差的误差
+$$
+	\Delta{\delta a}
+	=\frac{\Delta a}{\hat{a}}-\frac{\Delta a}{a}
+	=\frac{a-\hat{a}}{\hat{a}a}\Delta a
+	=\frac{1}{\hat{a}a}\Delta a^2=o(\Delta a)
+$$
+是$\Delta a$的高阶无穷小，
+因此该估算式是合理的。
+相对误差绝对值的上界
+$$
+	\eta>\lvert\delta a\rvert
+$$
+称为$\hat{a}$的\textit{相对误差限}。
+
+绝对误差有量纲，
+相对误差无量纲。
+一般在量值范围小的场合采用绝对误差限较多，
+量值范围大的场合则采用相对误差限较多，
+亦有兼用两者的情况。
+
+\subsection{舍入方法}
+设待处理的数为
+$$
+	a=\overline{a_{m-1}\dots a_0.a_{-1}\dots a_{-n}\dots}
+	=\sum_{i=1}^{+\infty}10^{m-i}a_{m-i}.
+$$
+将无限位字长的精确数处理成有限位字长近似数的处理方法称为\textit{舍入方法}。
+
+\subsubsection{截断法}
+直接截取高位部分
+$$
+	\hat{a}-\overline{a_{m-1}\dots a_0.a_{-1}\dots a_{-n}}
+	=\sum_{i=-n}^{m-1}10^ia_i.
+$$
+
+截断法的舍入误差限估计为$\hat{a}$最末位的1个单位，
+即$10^{-n}$。
+
+\subsubsection{四舍五入法}
+先按截断法处理，
+然后检查被截去的部分的首位数字$a_{-n-1}$。
+如果$a_{-n-1}\geq5$，
+则令$\hat{a}\gets\hat{a}+10^{-n}$。
+
+四舍五入法的舍入误差限为$0.5\times10^{-n}$。
+
+\subsubsection{改进的四舍五入法}
+\textbf{在期末考试中，应当采用朴素的四舍五入法。}
+
+\subsection{有效数字}
+\begin{definition}
+	设数$\hat{a}$的绝对误差不超过某一位数字的半个单位，
+	若该位数字到$\hat{a}$的第一位非零数字共有$s$位，
+	则称$\hat{a}$具有$s$位有效数字。
+\end{definition}
+
+对于一个有效数，
+可以根据以上定义获得该数的绝对误差限和相对误差限的估计如下。
+\begin{itemize}
+	\item 对于给出的一个有效数，
+	      其绝对误差限不大于其末位数字的半个单位。
+	\item 对于给出的一个有效数$\hat{a}=\overline{a_{s-1}\dots a_0}\times10^?$，
+	      其相对误差限
+	      $$
+		      \eta\leq\frac{0.5\times10^{-s}}{a_{s-1}}.
+	      $$
+\end{itemize}
+
+\section{算术运算中的误差}
+设$x^*,y^*$为准确值，
+$x,y$分别为其近似值。
+对于$\Delta x=x-x^*,\ \Delta y=y-y^*$常用其主部（指数值的高位部分）来近似它们，
+分别记为$\d{x}\approx\Delta x,\ \d{y}\approx\Delta y$。
+其与实际误差之差仅为数值的低位，
+可以略去。
+因此，
+近似值间的算术运算所产生的结果误差的主部可以按微分公式来近似估算。
+
+\subsection{加减运算}
+设$z=x\pm y$，
+则
+$$
+	\lvert\d{z}\rvert
+	=\lvert\d{x}\pm\d{y}\rvert
+	\leq\lvert\d{x}\rvert+\lvert\d{y}\rvert
+	\leq\varepsilon_x+\varepsilon_y.
+$$
+
+\subsection{乘法运算}
+设$z=x\cdot y$，
+则
+\begin{gather*}
+	\lvert\d{z}\rvert
+	=\lvert x\d{y}+y\d{x}\rvert
+	\leq\lvert x\rvert\varepsilon_y+\lvert y\rvert\varepsilon_x,\\
+	\lvert\delta z\rvert
+	=\left\lvert\frac{\d{z}}{z}\right\rvert
+	=\left\lvert\frac{\d{x}}{x}+\frac{\d{y}}{y}\right\rvert
+	=\lvert\delta x+\delta y\rvert
+	\leq\lvert\delta x\rvert+\lvert\delta y\rvert.
+\end{gather*}
+
+\subsection{除法运算}
+设$z=x/y$，
+则
+\begin{gather*}
+	\lvert\d{z}\rvert=\left\lvert\frac{y\d{x}-x\d{y}}{y^2}\right\rvert,\\
+	\lvert\delta z\rvert
+	=\left\lvert\frac{y\d{x}-x\d{y}}{y^2\cdot\frac{x}{y}}\right\rvert
+	=\left\lvert\frac{\d{x}}{x}-\frac{\d{y}}{y}\right\rvert
+	=\lvert\delta x-\delta y\rvert
+	\leq\lvert\delta x\rvert+\lvert\delta y\rvert.
+\end{gather*}
+
+\subsection{误差累积和小数问题}
+\subsubsection{误差累积}
+运算次数过多时，
+累积误差可能会很大。
+可以通过简化计算步骤来缓解。
+
+\subsubsection{大数吃小数}
+计算机做加法时，
+先将两加数的指数按大指数对齐（称为\textit{对阶}），
+再将尾数部分相加。
+如果两加数的数量级相差过大，
+较小的加数的尾数部分在对阶后可能全部落在舍入位之后，
+从而被当作$0$参与运算。
+
+在多个数求和时，
+按绝对值从小到大的顺序进行累加，
+可以缓解此问题。
+
+\subsubsection{相近数相减}
+相近数的具有相同的高位部分，
+相减后会导致有效数字位数大幅减少。
+
+$z=x-y$的相对误差
+$$
+	\lvert\delta z\rvert
+	\leq\lvert\delta x\rvert\left\lvert\frac{x}{z}\right\rvert+\lvert\delta y\rvert\left\lvert\frac{y}{z}\right\rvert,
+$$
+当$x,y$相近时，
+$z$接近$0$，
+故$\left\lvert\frac{x}{z}\right\rvert,\left\lvert\frac{y}{z}\right\rvert$都较大，
+$\lvert\delta z\rvert$的相对误差限会显著增大。
+
+改变计算公式可以缓解此问题，
+例如
+\begin{gather*}
+	\sqrt{x+1}-\sqrt{x}=\frac{1}{\sqrt{x}+\sqrt{x+1}},\\
+	\sin(x+\delta)-\sin x=2\cos\left(x+\frac{1}{2}\delta\right)\sin\left(\frac{1}{2}\delta\right),\\
+	\ln y-\ln x=\ln\frac{y}{x},\\
+	\arctan(x+\delta)-\arctan x=\arctan\frac{\delta}{1+x(x+\delta)}.
+\end{gather*}
+
+如果没有合适的转化公式，
+就只好预先多取几位有效数字了。
+
+\subsubsection{除以小数}
+当除数接近$0$时，
+被除数的舍入误差会被放大。
+
+\subsection{数学问题解的误差估计}
+设$x_i\ (i\in\N^*,\ i\leq n)$有绝对误差限$\varepsilon_i$和相对误差限$\eta_i$，
+当数据误差（即$\Delta x_i$）较小时，
+解$y=f(\vec{x})$的绝对误差限可以估计为
+$$
+	\lvert\Delta y\rvert
+	\approx\left\lvert\sum_{i=1}^{n}\frac{\partial y}{\partial x_i}\Delta x_i\right\rvert
+	\leq\sum_{i=1}^{n}\left\lvert\frac{\partial y}{\partial x_i}\right\rvert\varepsilon_i,
+$$
+相对误差限可以估计为
+$$
+	\lvert\delta y\rvert
+	\approx\left\lvert\sum_{i=1}^{n}\frac{\partial y}{\partial x_i}\frac{x_i}{y}\frac{\Delta x_i}{x_i}\right\rvert
+	\leq\sum_{i=1}^{n}\left\lvert\frac{\partial y}{\partial x_i}\frac{x_i}{y}\right\rvert\eta_i.
+$$
+
+以上两个估计公式都仅在数据误差较小时才适用，
+因为它们都是由$\Delta x_i$独立线性累加得到，
+而实际情况并非如此。
+
+上面两个公式中$\varepsilon_i$和$\eta_i$前的系数可以用于衡量解对数据误差的敏感程度。
+
+\subsection{算法举例}
+
+\section{数值计算中的误差}
+
+\subsection{数值计算中的误差种类}
+用数值方法解题的一般过程：
+\begin{enumerate}
+	\item 对于要解决的问题建立数学模型。
+	\item 研究用于求解该数学问题近似解的算法和过程。
+	\item 手工或用计算机计算，得到结果。
+\end{enumerate}
+
+\subsubsection{模型误差}
+\textit{数学模型}是指那些利用数学语言模拟现实而建立起来的有关量的描述，
+通常由真实模型忽略次要因素简化得到。
+实际问题的真解与数学模型之间的误差称为\textit{\underline{模型/描述}误差}。
+
+在数值计算中，
+我们总是假定所研制的数学模型是合理的，
+其误差仅作为选择合适数值方法的依据。
+
+\subsubsection{观测误差}
+由于测量工具的精度、观测方法或客观条件的限制而使数据含有的误差叫做\textit{\underline{观测/数据}误差}。
+
+\subsubsection{截断误差}
+求解数学模型所用的数值计算方法如果是一种近似的方法，
+其得到的结果就会是数学模型的近似解，
+由此产生的误差称为\textit{截断误差}。
+
+截断误差是数值计算中必须考虑的一类误差。
+
+\subsubsection{舍入误差}
+由于数值计算只能对有限位字长的数值进行运算，
+所以必须对参与运算的数据作有限位字长的舍入处理，
+由此引入的误差称为\textit{\underline{舍入/计算}误差}。
+
+舍入误差也是数值计算中必须考虑的一类误差。
+
+\subsection{模型与解}
+\subsubsection{数学模型的解}
+\paragraph{数学模型的精确解}
+数学模型，精确数据，精确计算。
+
+\paragraph{参数模型的精确解}
+数学模型，观测数据，精确计算。
+
+\subsubsection{计算模型的解}
+不能求解数学模型的精确解时，
+就采用数值的方法建立该数学模型的求解模型，
+称为\textit{计算模型}。
+
+\paragraph{计算模型的精确解}
+\textbf{计算}模型，观测数据，精确计算，
+在参数模型的精确解的基础上引入截断误差$R$。
+
+\paragraph{计算模型的近似解}
+计算模型，\textbf{有舍入的}观测数据，\textbf{近似}计算。
+在计算模型的精确解的基础上引入舍入误差$\epsilon$。
+
+\subsection{数学问题的适定性与性态}
+前文给出的误差估计方法只对运算量很少的情形适用；
+对于大规模数值计算的舍入误差，
+目前尚无有效的方法做出定量估计。
+为了确保数值计算结果的正确性，
+应对数值计算问题进行定性分析，
+以保证舍入误差不会影响计算的精度。
+
+\begin{definition}
+	设原始数据的定义域为$D$，
+	解的定义域为$R$，
+	建立的数学模型为$f:D\to R$。
+	如果$f$满足以下条件：
+	\begin{itemize}
+		\item 单射：
+		      对于任何$x\in D$，
+		      解$y=f(x)$存在且唯一。
+		\item 连续性条件：
+		      $\lVert \Delta x\rVert\to0$时，
+		      $\lVert \Delta y\rVert\to0$。
+	\end{itemize}
+	则称该数学问题是适定的，
+	否（有多个解或解不连续依赖于原始数据）则称为不适定的。
+\end{definition}
+
+数值计算处理的问题应当是适定的。
+
+\begin{definition}
+	在适定的条件下，
+	若对于原始数据很小的变化，
+	数学模型解的变化也很小，
+	则称该数学问题是良态问题；
+	若原始数据很小的变化，
+	数学模型解的变化很大，
+	则称为病态问题。
+\end{definition}
+
+这里的“很大”于“很小”都是相对而言的，
+没有数学上的严格界限。
+
+数学问题的性态是针对数学问题而言的，
+完全取决于该数学问题的属性，
+与采用的数值方法无关。
+
+\begin{definition}
+	舍入误差对计算结果影响小的算法称为稳定的算法，
+	否则称为不稳定的算法。
+\end{definition}
+
+\section{误差分配原则与处理方法}
+\subsection{误差配置原理}
+计算模型的近似解相对于参数模型精确解的总误差为截断误差与舍入误差之和，
+即
+$$
+	\varepsilon=R+\epsilon.
+$$
+
+只有当$R\approx\epsilon$时才不会出现过多位字长和过多公式项上计算量的浪费。
+因此，
+对于这两类误差最为合理的配置原则是尽量使$R=\epsilon$。
+
+\subsection{误差配置的处理方法}
+\subsubsection{由运算误差确定参与运算的数值的字长}
+设$\vec{x}=(x_i)_{i=1}^n$为参与运算的数值，
+其舍入误差均为$\varDelta$，
+计算公式为$y=f(\vec{x})$，
+则计算结果的舍入误差限可近似估计为
+$$
+	\lvert\Delta y\rvert
+	\leq\left(\sum_{i=1}^{n}\left\lvert\frac{\partial y}{\partial x_i}\right\rvert\right)\varDelta.
+$$
+令$\lvert\Delta y\rvert\leq\epsilon$，
+得
+$$
+	\varDelta
+	\leq\frac{\epsilon}{\sum_{i=1}^{n}\left\lvert\frac{\partial y}{\partial x_i}\right\rvert}.
+$$
+
+\subsubsection{由总误差确定近似公式的精度和数值的字长}
+按照误差配置原则，
+应取
+$$
+	R=\epsilon=\frac{1}{2}\varepsilon.
+$$
+由
+$$
+	\lvert R\rvert\leq\frac{1}{2}\varepsilon
+$$
+可以确定近似公式的精度。
+确定了数值公式后，
+便可由$\epsilon=\frac{1}{2}\varepsilon$确定数值的字长。
+
+\subsubsection{由字长确定近似公式的精度}
+采用尝试法。
+
+\chapter{方程（组）的迭代解法}
+\section{引言}
+本章重点介绍求方程实根的迭代解法，
+适用于求解代数方程和超越方程,
+但仅限于求方程的实根。
+
+\section{迭代解法}
+对$f(x)=0$做变换得$x=\varphi(x)$，
+定义残差$R(x)=\varphi(x)-x$，
+选定参数$w$，
+则迭代公式为
+$$
+	x^{(n+1)}\gets x^{(n)}+\Delta x^{(n)}\ (n\in\N),
+$$
+其中
+\begin{gather*}
+	\Delta x^{(n)}=wR(x^{(n)}),\\
+	R(x^{(n)})=\varphi(x^{(n)})-x^{(n)}.
+\end{gather*}
+
+\subsection{根的初值确定方法}
+\begin{theorem}[零点存在定理]
+	设函数$f\in C[a,b]$。
+	若$f(a)f(b)<0$，
+	则$\exists c\in(a,b)\ (f(c)=0)$，
+	即$f$在$[a,b]$上有至少一个零点。
+	特别地，
+	若$f$在$[a,b]$上\underline{单调且只有有限个零点/严格单调}，
+	则$f$在$[a,b]$有唯一的零点。
+\end{theorem}
+
+\subsubsection{画图法}
+将$f(x)=0$等价变换为$\varphi_1(x)=\varphi_2(x)$，
+在同一坐标系下画出曲线$y=\varphi_1(x)$和$y=\varphi_2(x)$的草图，
+观察它们的交点，
+从而确定根的大致位置。
+
+\subsubsection{扫描法}
+假设已经知道有根区间$[l,r]$。
+为了缩小范围，
+可以选定步长$h$，
+依次检查$x_i=l+hi\ (i\in\N,\ i\leq\frac{r-l}{h})$处函数值的符号。
+
+步长过大可能会跳过零点；
+步长过小则会导致计算量过大。
+
+\subsubsection{对分法}
+
+二分查找。
+对于区间$[l,r]$，
+如果要求解的误差不超过$\varepsilon$，
+则需要迭代次数$n\geq\log_2\left(\frac{r-l}{\varepsilon}\right)$。
+
+优点：
+计算简单，
+对方程要求低（只需连续）。
+缺点：
+无法求复根和偶重根，
+收敛慢。
+
+\subsection{迭代法的求解过程}
+\subsubsection{建立迭代公式}
+将原方程$f(x)=0$等价变换为$x=\varphi(x)$，
+将这个$\varphi$称为\textit{迭代函数}。
+
+$x^{(n+1)}=\varphi(x^{(n)})\ (n\in\N)$称为\textit{迭代公式}，
+由此得到的$\{x^{(n)}\}_{n=0}^{+\infty}$称为\textit{迭代序列}。
+如果迭代序列的极限存在，
+则该极限为原方程的一个解。
+
+\subsubsection{迭代计算}
+
+\subsection{迭代解法的几何意义}
+由曲线$y=\varphi(x)$和$y=x$作蛛网图。
+
+\subsection{迭代法的收敛性}
+影响迭代法收敛性的要素：
+\begin{itemize}
+	\item 迭代函数在根近旁的性态
+	\item 初值的选取范围
+\end{itemize}
+
+迭代法收敛的类型：
+\begin{itemize}
+	\item 大范围收敛：
+	      从任何可取初值出发都能保证收敛。
+	\item 局部收敛：
+	      为了保证收敛性必须选取初值充分接近于所要求的根，
+	      通常比大范围收敛方法收敛得快。
+\end{itemize}
+
+合理的求根算法：
+先用一种大范围收敛方法求得接近于根的近似值（如对分法），
+再以其作为新的初值使用局部收敛法（如迭代法）。
+
+\begin{theorem}[迭代法收敛的充分条件]
+	设根$x^*\in[l,r]$，
+	$\varphi\in D[l,r]$。
+	若
+	$$
+		\exists q\in[0,1)\ (\forall x\in[a,b]\ (\lvert\varphi'(x)\rvert\leq q)),
+	$$
+	则对任何初值$x_0\in[l,r]$，
+	迭代过程必收敛。
+\end{theorem}
+
+在实际应用时，
+因$\varphi'(x)$连续且$[l,r]$较小，
+$\varphi'$的值通常变化不大，
+判定条件可用$\lvert\varphi'(x_0)\rvert<1$代替。
+
+\begin{definition}
+	设迭代序列$\{x^{(n)}\}_{n=0}^{+\infty}$收敛。
+	若存在$c,r>0$使得
+	$$
+		\lim_{n\to+\infty}\frac{\lvert x^{(n+1)}-x^*\rvert}{\lvert x^{(n)}-x^*\rvert^r}=c,
+	$$
+	则称该迭代序列是$r$阶收敛的，
+	$c$为渐进常数。
+
+	$r=1$称为线性收敛；
+	$r>1$称为超线性收敛；
+	$r=2$称为平方收敛。
+\end{definition}
+
+\begin{theorem}
+	设迭代函数$\varphi$在根$x^*$附近有$r$阶连续导数，
+	且
+	$$
+		(\forall i\in\N\cap[1,r)\ (\varphi^{(i)}(x^*)=0))\land\varphi^{(r)}(x^*)\neq0,
+	$$
+	则该收敛序列是$r$阶收敛的。
+\end{theorem}
+
+\subsection{迭代序列的误差估计}
+理想的迭代终止条件：
+当$\lvert x^{(n+1)}-x^*\rvert<\varepsilon$时，
+$x^{(n+1)}$即为所求的近似值。
+
+因为精确解$x^*$未知，
+我们只能寻找$\lvert x^{(n+1)}-x^*\rvert$的上界来间接判定，
+放缩得到上界的公式称为上界公式。
+
+\begin{theorem}[上界公式]
+	设精确解$x^*\in[l,r]$，
+	$q\in[0,1)$满足
+	$$
+		\forall x\in[a,b]\ (\lvert\varphi'(x)\rvert\leq q),
+	$$
+	则必有
+	\begin{itemize}
+		\item $\lvert x^{(n+1)}-x^*\rvert\leq\frac{q}{1-q}\lvert x^{(n+1)}-x^{(n)}\rvert$。
+
+		      为了使其更加简便，
+		      我们可以分情况进一步简化：
+		      \begin{itemize}
+			      \item 若$0<q\leq\frac{1}{2}$，
+			            则$\lvert x^{(n+1)}-x^*\rvert\leq\frac{q}{1-q}\lvert x^{(n+1)}-x^{(n)}\rvert\leq\lvert x^{(n+1)}-x^{(n)}\rvert$，
+			            此时迭代序列收敛的一个充分条件为
+			            $$
+				            \lvert x^{(n+1)}-x^{(n)}\rvert\leq\varepsilon.
+			            $$
+			      \item 若$\frac{1}{2}<q<1$，
+			            则此时只能用充分条件
+			            $$
+				            \lvert x^{(n+1)}-x^{(n)}\rvert\leq\left(\frac{1}{q}-1\right)\varepsilon.
+			            $$
+		      \end{itemize}
+		\item $\lvert x^{(n)}-x^*\rvert\leq\frac{q^n}{1-q}\lvert x_1-x_0\rvert$。
+
+		      该式常用于估计迭代次数
+		      $$
+			      n\geq\log_q\frac{\varepsilon(1-q)}{\lvert x_1-x_0\rvert}.
+		      $$
+		\item 若还存在$m\in(0,1)$满足$\forall x\in[a,b]\ (\lvert f'(x)\rvert\geq m)$，
+		      则
+		      $$
+			      \lvert x^{(n)}-x^*\rvert\leq\frac{\lvert f(x^{(n)})\rvert}{m}.
+		      $$
+		      此时迭代序列收敛的一个充分条件为
+		      $$
+			      \lvert f(x^{(n)})\rvert\leq\varepsilon m.
+		      $$
+	\end{itemize}
+\end{theorem}
+
+
+\section{迭代公式的改进}
+方法：
+\begin{itemize}
+	\item 提高初值的精度以减少迭代的次数。
+	\item 改变迭代公式，
+	      以减小$q$或提高收敛阶数$r$。
+\end{itemize}
+
+可以选择合适的参数$w$来加快收敛速度。
+
+\subsection{改变方程式法之一}
+\subsubsection{引入可选参数法}
+引入参数$\theta\notin\{0,1\}$。
+将等式$x=\varphi(x)$两边同时减去$\theta x$，
+得
+$$
+	(1-\theta)x=\varphi(x)-\theta x,
+$$
+同时除以$(1-\theta)$得
+$$
+	x=\frac{1}{1-\theta}(\varphi(x)-\theta x)\triangleq\psi(x).
+$$
+于是迭代公式为
+$$
+	x^{(n+1)}=\psi(x^{(n)})=\frac{1}{1-\theta}(\varphi(x^{(n)})-\theta x^{(n)})\ (n\in\N).
+$$
+
+本法等价于取$w=\frac{1}{1-\theta}$。
+应选择合适的$\theta$使$\lvert\psi'(x)\rvert=\left\lvert\frac{1}{1-\theta}(\varphi'(x)-\theta)\right\rvert$尽量小，
+故应取$\theta\approx\varphi'(x^*)$，
+其中$x^*$是方程的实际解。
+
+\subsubsection{Aitken加速收敛法}
+\paragraph{方法描述}
+对于$x^{(n)}$，
+迭代两次得到三个相邻得迭代值$x^{(n)},y^{(n)}=\varphi(x^{(n)}),z^{(n)}=\varphi(y^{(n)})$。
+取割线斜率作为参数$\theta^{(n)}$，即
+$$
+	\theta^{(n)}=\frac{z^{(n)}-y^{(n)}}{y^{(n)}-x^{(n)}},
+$$
+则新的迭代公式为
+$$
+	x^{(n+1)}
+	=\frac{1}{1-\theta^{(n)}}(y^{(n)}-\theta^{(n)}x^{(n)})
+	=\frac{x^{(n)}z^{(n)}-y^{(n)2}}{x^{(n)}-2y^{(n)}+z^{(n)}}
+	\triangleq\psi(x^{(n)})\
+	(n\in\N).
+$$
+
+\paragraph{几何意义}
+以直代曲。
+
+\paragraph{收敛阶数}
+Aitken法二阶收敛。
+\begin{theorem}[Aitken法的收敛性质]
+	设原迭代函数$\varphi$在解$x^*$的邻域有连续$(r+1)$阶导数。
+	对$r=1$，
+	若$\varphi(x*)\neq1$，
+	则埃特肯法是$2$阶收敛的。
+	若原迭代函数$\varphi$是$r>1$阶收敛的，
+	则埃特肯法是$(2r-1)$阶收敛的。
+\end{theorem}
+
+\subsubsection{组合法}
+
+\subsection{改变方程式法之二}
+
+\subsection{Newton迭代法}
+\subsubsection{方法描述}
+\paragraph{迭代公式}
+$$
+	x^{(n+1)}=x^{(n)}-\frac{f(x^{(n)})}{f'(x^{(n)})}\ (n\in\N).
+$$
+
+\paragraph{终止条件}
+$$
+	\lvert x^{(n+1)}-x^{(n)}\rvert<\varepsilon.
+$$
+
+\subsubsection{Newton迭代法的收敛性}
+\paragraph{收敛阶数}
+Newton迭代法$2$阶收敛。
+
+\begin{theorem}[Newton迭代法收敛的充分条件]
+	设精确解$x^*\in[l,r]$，
+	$f\in D^2[l,r]$。
+	若以下条件均满足：
+	\begin{itemize}
+		\item $f(l)f(r)<0$（有根）。
+		\item $\forall x\in[l,r]\ (f'(x)\neq0)$（根唯一）。
+		\item 在$[l,r]$上$f''$不变号。
+		\item 初值$x^{(0)}$满足$f(x^{(0)})f''(x^{(0)})>0$
+		      （避免跳过真解，与上一条一起保证迭代序列始终在$[l,r]$内）。
+	\end{itemize}
+	则Newton迭代法必收敛。
+\end{theorem}
+
+\subsubsection{切线法的变形使用}
+\paragraph{\underline{简化/固定斜率的}切线法}
+始终使用初值处的切线斜率，
+即
+$$
+	x^{(n+1)}=x^{(n)}-\frac{f(x^{(n)})}{f'(x^{(0)})}.
+$$
+
+\paragraph{修正的切线法}
+$$
+	x^{(n+1)}=x^{(n)}-\frac{f(x^{(n)})}{f'(x^{\left(\left\lfloor\frac{n}{m}\right\rfloor\right)})}.
+$$
+
+\paragraph{Newton下山法}
+为扩大收敛范围，
+引入\textit{下山因子}$\lambda$以约束$\{\lvert f(x^{(n)})\rvert\}_{n=0}^{+\infty}$单调下降。
+称$\lvert f(x^{(n)})\rvert>\lvert f(x^{(n+1)})\rvert$为\textit{下山条件}。
+此时的迭代公式为
+$$
+	x^{(n+1)}=x^{(n)}-\lambda\frac{f(x^{(n)})}{f'(x^{(n)})}\ (n\in\N).
+$$
+每次迭代时，
+先调整下山因子（一般可以依次取$\{2^{-i}\}_{i=0}^{+\infty}$）使下山条件成立，
+再计算下一步迭代值。
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }newton\_downhill(f,x_0,\varepsilon,m,h)                                                                                                                                            \\
+		2  & \qquad f'\gets get\_derivative\_of(f,h)                                                                                                                                                              \\
+		3  & \qquad\textbf{for }n\in\N\cap[0,m)                                                                                                                                                                   \\
+		4  & \qquad\qquad\textbf{if }\lvert f(x_0)\rvert<\varepsilon                                                                                                                                              \\
+		5  & \qquad\qquad\qquad\textbf{return }x_0                                                                                                                                                                \\
+		6  & \qquad\qquad\textbf{if }\lvert f'(x_0)\rvert<\varepsilon                                                                                                                                             \\
+		7  & \qquad\qquad\qquad\textbf{break}\textit{ // to avoid division by 0}                                                                                                                                  \\
+		8  & \qquad\qquad d\gets1                                                                                                                                                                                 \\
+		9  & \qquad\qquad\textbf{while }\left\lvert f\left(x_0-\frac{f(x_0)}{d\cdot f'(x_0)}\right)\right\rvert>\lvert f(x_0)\rvert\textbf{ and }\left\lvert\frac{f(x_0)}{d\cdot f'(x_0)}\right\rvert>\varepsilon \\
+		10 & \qquad\qquad\qquad d\gets2d                                                                                                                                                                          \\
+		11 & \qquad\qquad x_0\gets x_0-\frac{f(x_0)}{d\cdot f'(x_0)}                                                                                                                                              \\
+		12 & \qquad\textbf{return }x_0\textit{ // not converged}                                                                                                                                                  \\
+	\end{array}
+$$
+
+Newton下山法事实上是将$x^{(n)}$与通过Newton迭代法计算得到的下一步迭代值进行线性组合，
+作为真正的下一步迭代值，
+即
+$$
+	x^{(n+1)}=(1-\lambda)x^{(n)}+\lambda\left(x^{(n)}-\frac{f(x^{(n)})}{f'(x^{(n)})}\right)\ (x\in\N).
+$$
+
+\subsection{弦截法}
+牛顿迭代法每迭代一次都需计算函数值和导数值，
+计算量较大；
+且迭代过程仅使用上一步迭代信息，
+没有充分利用历史信息。
+当导数计算复杂或难以计算时，
+利用割线来近似切线就是很自然的想法了。
+
+\subsubsection{单点弦截法}
+固定割线的一端在初值处，
+另一端在当前迭代点处。
+
+\paragraph{迭代公式}
+$$
+	x^{(n+1)}
+	=x^{(n)}-\frac{f(x^{(n)})}{\frac{f(x^{(n)})-f(x^{(0)})}{x^{(n)}-x^{(0)}}}\ (n\in\N).
+$$
+
+\paragraph{收敛阶数}
+单点弦截法$1$阶收敛。
+
+\paragraph{收敛条件}
+\begin{theorem}[单点弦截法收敛的充分条件]
+	设精确解$x^*\in[l,r]$，
+	$f\in D^2[l,r]$。
+	若以下条件均满足：
+	\begin{itemize}
+		\item $f(l)f(r)<0$（有根）。
+		\item $\forall x\in[l,r]\ (f'(x)\neq0)$（根唯一）。
+		\item 在$[l,r]$上$f''$不变号。
+		\item 初值（同时也是固定的端点）$x^{(0)}$满足$f(x^{(0)})f''(x^{(0)})>0$（避免跳过真解），
+		      且$f(x^{(1)})\neq f(x^{(0)})$（避免割线斜率为$0$）。
+	\end{itemize}
+	则单点弦截法必收敛。
+\end{theorem}
+
+\subsubsection{双点弦截法}
+用最后两个点构造割线。
+此时割线的两个端点都会移动。
+
+双点弦截法需要指定两个初值$x^{(0)},x^{(1)}$。
+
+\paragraph{迭代公式}
+$$
+	x^{(n+1)}=x^{(n)}-\frac{f(x^{(n)})}{\frac{f(x^{(n)})-f(x^{(n-1)})}{x^{(n)}-x^{(n-1)}}}\ (n\in\N^*).
+$$
+
+\paragraph{收敛阶数}
+双点弦截法的收敛阶数为$\frac{1+\sqrt{5}}{2}\approx1.618$。
+
+\paragraph{收敛条件}
+\begin{theorem}[双点弦截法收敛的充分条件]
+	设精确解$x^*\in[l,r]$，
+	$f\in C^2[l,r]$。
+	若以下条件均满足：
+	\begin{itemize}
+		\item $f(l)f(r)<0$（有根）。
+		\item $\forall x\in[l,r]\ (f'(x)\neq0)$（根唯一）。
+	\end{itemize}
+	则对任取的初值$x^{(0)},x^{(1)}\in[l,r]$，
+	双点弦截法均必收敛。
+\end{theorem}
+
+\subsection{$\lvert\varphi'(x)\rvert>1$的处理方法}
+如果$\varphi$反函数存在，
+则可以利用反函数迭代，
+即
+$$
+	x^{(n+1)}=\varphi^{-1}(x^{(n)})\ (n\in\N).
+$$
+
+\subsection{高阶迭代函数的构造方法}
+不讲。
+
+\section{联立方程组的迭代解法}
+将$\vec{f}(\vec{x})=\vec{0}$等价变换为$\vec{x}=\vec{\varphi}(\vec{x})$。
+
+\section{联立方程组的Newton解法}
+不讲。
+
+\section{联立方程组的延拓解法}
+\subsection{同伦方程组及其建立方法}
+
+\subsection{求解方法}
+
+\chapter{解线性方程组的直接法}
+线性方程组是以下形式的多元一次方程组：
+$$
+	avec{x}=\vec{b},
+$$
+其中$a\in\F^{n\times n}$为系数矩阵，
+$\vec{x}\in\F^n$为未知向量，
+$\vec{b}\in\F^n$为偏置向量。
+
+线性方程组的数值方法一般有两类：
+\begin{itemize}
+	\item 直接法：
+	      在不考虑舍入误差的情况下，
+	      经过有限步运算后能求得方程组准确解的方法。
+	      没有方法误差，
+	      但计算量较大，
+	      适合系数矩阵低阶/稠密的情况。
+	\item 迭代法
+	      用某种极限过程去逐步逼近线性方程组精确解的方法。
+	      计算量相对较小，
+	      但有方法误差，
+	      适合系数矩阵高阶/稀疏的情况。
+\end{itemize}
+
+\section{消元法}
+通过线性变换将方程组化为上三角形，
+然后逐步回代求解。
+
+\subsection{方法的一般描述}
+\subsubsection{消元}
+对于第$i$行，
+择定$l_{i,i}$遍除第$i$行，
+得到
+$$
+	u_i\vec{x}=c_i,
+$$
+其中
+$$
+	u_i=\frac{[a_{i,j}]_{j=1}^n}{l_{i,i}},\ c_i=\frac{b_i}{l_{i,i}}.
+$$
+然后对于第$j>i$行，
+通过行变换使得$a_{j,i}=0$，
+为此需要将第$j$行减去第$i$行的$l_{j,i}=\frac{a_{j,i}}{u_{i,i}}$倍，
+即
+\begin{gather*}
+	[a_{j,k}]_{k=1}^n\gets[a_{j,k}]_{k=1}^n-l_{j,i}[u_{i,k}]_{k=1}^n,\\
+	b_j\gets b_j-l_{j,i}c_i.
+\end{gather*}
+
+通过以上过程可以得到上三角形方程组
+$$
+	u\vec{x}=\vec{c},
+$$
+其中$u=([u_{i,j}]_{j=1}^n)_{i=1}^n$为上三角形矩阵，
+$\vec{c}=(c_i)_{i=1}^n$。
+在此过程中使用的$l=([l_{i,j}]_{j=1}^n)_{i=1}^n$为下三角形矩阵，
+所以消元过程实际上是对系数矩阵$a$作LU分解
+$$
+	a=lu.
+$$
+
+归纳计算公式：
+\begin{gather*}
+	u_{i,j}=\frac{a_{i,j}-\sum_{k=1}^{i-1}l_{i,k}u_{k,j}}{l_{i,i}}\ (i,j\in\N^*,\ i\leq j\leq n)\\
+	l_{i,j}=\frac{a_{i,j}-\sum_{k=1}^{j-1}l_{i,k}u_{k,j}}{u_{j,j}}\ (i,j\in\N^*,\ j<i\leq n)\\
+	c_i=\frac{b_i-\sum_{k=1}^{i-1}l_{i,k}c_k}{l_{i,i}}\ (i\in\N^*,\ i\leq n).
+\end{gather*}
+
+\subsubsection{回代}
+$$
+	x_i=\frac{c_i-\sum_{k=i+1}^{n}u_{i,k}x_k}{u_{i,i}}\ (i\in\N^*,\ i\leq n).
+$$
+
+\subsection{Gauss消元法（Gaussian elimination）}
+取$l_{i,i}=1$。
+
+\subsection{Crout分解法（Crout decomposition method）}
+取$u_{i,i}=1$，
+于是需要
+$$
+	l_{i,i}=a_{i,i}-\sum_{k=1}^{i-1}l_{i,k}u_{k,i}\ (i\in\N^*,\ i\leq n).
+$$
+
+\subsection{平方根法}
+仅用于\textbf{对称}的系数矩阵。
+
+取$l_{i,i}=u_{i,i}$，
+于是需要
+$$
+	l_{i,i}=\sqrt{a_{i,i}-\sum_{k=1}^{i-1}l_{i,k}^2}=u_{i,i}\ (i\in\N^*,\ i\leq n).
+$$
+此时有
+$$
+	\forall i,j\in\N\cap[1,n]\ (l_{i,j}=u_{j,i}),
+$$
+即$l$和$u$互为转置矩阵。
+
+\subsection{追赶法}
+Crout分解法用于三对角矩阵（$\forall i,j\in\N\cap[1,n]\ ((a_{i,j}\neq0)\to(|j-i|\leq1))$）的特殊情况。
+
+由Crout分解法得
+\begin{gather*}
+	l_{i,i}=a_{i,i}-l_{i,i-1}u_{i-1,i}\ (i\in\N^*,\ i\leq n)\\
+	l_{i+1,i}=a_{i+1,i}\ (i\in\N^*,\ i<n)\\
+	u_{i,i+1}=\frac{a_{i,i+1}}{l_{i,i}}\ (i\in\N^*,\ i<n)\\
+	c_i=\frac{b_i-l_{i,i-1}c_{i-1}}{l_{i,i}}\ (i\in\N^*,\ i\leq n),
+	x_i=c_i-u_{i,i+1}x_{i+1}\ (i\in\N^*,\ i\leq n),
+\end{gather*}
+其中下标越界的数都用$0$代替。
+
+\subsection{消元法的应用条件}
+消元法能够正常进行，
+当且仅当$\forall i\in\N^*\cap[1,n]\ (l_{i,i}\neq0\neq u_{i,i})$。
+
+\begin{theorem}
+	若$a$的各阶主子式均非零，
+	即
+	$$
+		\forall i\in\N^*\cap[1,n]\ (\det(([a_{j,k}]_{k=1}^i)_{j=1}^i)\neq0),
+	$$
+	则$\forall i\in\N^*\cap[1,n]\ (l_{i,i}\neq0\neq u_{i,i})$。
+\end{theorem}
+
+\begin{theorem}
+	若$a$为实对称正定矩阵（实对称矩阵正定的充要条件是其各阶主子式均为正），
+	则$\forall i\in\N^*\cap[1,n]\ (l_{i,i}\neq0\neq u_{i,i})$。
+	此时可以用平方根法计算，
+	且计算过程不会涉及复数。
+\end{theorem}
+
+\begin{definition}
+	如果矩阵$a\in\F^{n\times n}$满足
+	$$
+		\forall i\in\N\cap[1,n]\
+		\left(\lvert a_{i,i}\rvert>\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)\lvert a_{i,j}\rvert\right),
+	$$
+	则称$a$为严格对角占优矩阵。
+\end{definition}
+
+\begin{theorem}[Hadamard定理]
+	如果矩阵$a\in\F^{n\times n}$严格对角占优，
+	则其行列式$\det a\neq0$。
+\end{theorem}
+
+\begin{theorem}
+	若系数矩阵$a$严格对角占优，
+	则$\forall i\in\N^*\cap[1,n]\ (l_{i,i}\neq0\neq u_{i,i})$。
+\end{theorem}
+
+\section{选主元的Gauss消元法}
+分母为$0$或接近$0$时，
+分别会导致消元法产生$\infty$或舍入误差过大。
+可以通过矩阵的线性变换来交换行或列，
+使得消元过程中分母尽可能大。
+
+\subsection{列主元素法}
+每次选定当前未处理的列中绝对值最大的系数作为主元，
+并将该列的主元所在行与当前未处理的行\textbf{交换}。
+
+选择列主元的Gauss消元法实际上是对系数矩阵$a$作分解
+$$
+	pa=lu,
+$$
+其中$p$为置换矩阵。
+
+\subsection{全主元素法}
+在全体待选系数中选取主元。
+此方法会导致未知数次序改变，
+非常麻烦。
+
+\section{关于结果精度的检验}
+不讲。
+
+\chapter{解线性方程组的迭代法}
+\section{向量范数、矩阵范数、谱半径及有关性质}
+\begin{definition}
+	设$n\in\N^*$。
+	如果运算$\lVert\cdot\rVert:\F^n\to\R$满足
+	\begin{itemize}
+		\item 非负性：
+		      $\forall\vec{x}\in\F^n\ (\lVert\vec{x}\rVert\geq0)$，
+		      且$\lVert\vec{x}\rVert=0\iff\vec{x}=\vec{0}$。
+		\item 齐次性：
+		      $\forall\vec{x}\in\F^n,\forall\alpha\in\F\ (\lVert\alpha\vec{x}\rVert=\lvert\alpha\rvert\lVert\vec{x}\rVert)$。
+		\item 三角不等式：
+		      $\forall\vec{x},\vec{y}\in\F^n\ (\lVert\vec{x}+\vec{y}\rVert\leq\lVert\vec{x}\rVert+\lVert\vec{y}\rVert)$。
+	\end{itemize}
+	则称$\lVert\cdot\rVert$为$\F^n$上的一个向量范数。
+\end{definition}
+
+在$\R^n$上常用的向量范数有：
+\begin{itemize}
+	\item $p$-范数（$p\geq1$）：$\lVert\vec{x}\rVert_p=\left(\sum_{i=1}^n\lvert x_i\rvert^p\right)^{\frac{1}{p}}$。
+	\item $1$-范数：$\lVert\vec{x}\rVert_1=\sum_{i=1}^n\lvert x_i\rvert$。
+	\item $2$-范数：$\lVert\vec{x}\rVert_2=\sqrt{\sum_{i=1}^n\lvert x_i\rvert^2}$。
+	\item $\infty$-范数：$\lVert\vec{x}\rVert_\infty=\max_{i=1}^n\lvert x_i\rvert$。
+\end{itemize}
+
+\begin{definition}
+	设$a\in\F^{n\times n}$。
+	如果运算$\lVert\cdot\rVert:\F^{n\times n}\to\R$满足
+	\begin{itemize}
+		\item 非负性：
+		      $\forall a\in\F^{n\times n}\ (\lVert a\rVert\geq0)$，
+		      且$\lVert a\rVert=0\iff a=\vec{0}$。
+		\item 齐次性：
+		      $\forall a\in\F^{n\times n},\forall\alpha\in\F\ (\lVert\alpha a\rVert=\lvert\alpha\rvert\lVert a\rVert)$。
+		\item 三角不等式：
+		      $\forall a,b\in\F^{n\times n}\ (\lVert a+b\rVert\leq\lVert a\rVert+\lVert b\rVert)$。
+		\item 乘法不等式：
+		      $\forall a,b\in\F^{n\times n}\ (\lVert ab\rVert\leq\lVert a\rVert\lVert b\rVert)$。
+	\end{itemize}
+	则称$\lVert\cdot\rVert$为$\F^{n\times n}$上的一个矩阵范数。
+\end{definition}
+
+\begin{definition}
+	如果$\F^n$上的向量范数$\lVert\cdot\rVert_\mathrm{v}$和$\F^{n\times n}$上的矩阵范数$\lVert\cdot\rVert_\mathrm{m}$满足
+	$$
+		\lVert a\vec{x}\rVert_\mathrm{v}\leq\lVert a\rVert_\mathrm{m}\lVert\vec{x}\rVert_\mathrm{v},
+	$$
+	则称矩阵范数$\lVert\cdot\rVert_\mathrm{m}$和向量范数$\lVert\cdot\rVert_\mathrm{v}$相容。
+\end{definition}
+
+\begin{definition}
+	设$\F^n$上定义了向量范数$\lVert\cdot\rVert_\mathrm{v}$，
+	令
+	$$
+		\lVert\cdot\rVert_\mathrm{m}:
+		a\mapsto\max_{\lVert\vec{x}\rVert_\mathrm{v}=1}\lVert a\vec{x}\rVert_\mathrm{v}\
+		(a\in\F^{n\times n}),
+	$$
+	则$\lVert\cdot\rVert_\mathrm{m}$是$\F^{n\times n}$上的一个矩阵范数，
+	且与$\lVert\cdot\rVert_\mathrm{v}$相容，
+	称其为\underline{从属于$\lVert\cdot\rVert_\mathrm{v}$/由$\lVert\cdot\rVert_\mathrm{v}$导出}的矩阵范数，
+	也称为算子范数。
+\end{definition}
+
+单位矩阵的算子范数必为$1$。
+
+对于向量的$1$-范数、$2$-范数和$\infty$-范数，
+其从属于向量范数的矩阵范数分别为：
+\begin{itemize}
+	\item \underline{$1$-/列}范数：$\lVert a\rVert_1=\max_{j=1}^n\sum_{i=1}^n\lvert a_{i,j}\rvert$。
+	\item $2$-范数：$\lVert a\rVert_2=\sqrt{\lambda_{\max}(A^\top A)}=\sqrt{\rho(A^\top A)}$，
+	      其中$\lambda_{\max}(A^\top A)$为矩阵$A^\top A$的最大特征值。
+	\item \underline{$\infty$-/行}范数：$\lVert a\rvert_\infty=\max_{i=1}^n\sum_{j=1}^n\lvert a_{i,j}\rvert$。
+\end{itemize}
+
+此外，还有一种常用的矩阵范数，
+称为Frobenius范数，
+定义为
+$$
+	\lVert a\rVert_F
+	=\sqrt{\sum_{i=1}^n\sum_{j=1}^n\lvert a_{i,j}\rvert^2}=\sqrt{\tr(A^\top A)}\
+	(a\in\F^{n\times n}).
+$$
+它不是算子范数，
+但它与向量的$2$-范数相容。
+
+\begin{definition}
+	设$a\in\F^{n\times n}$的特征值分别为$\vec{\lambda}=(\lambda_i)_{i=1}^n$，
+	称
+	$$
+		\rho(a)\triangleq\max_{i=1}^n\lvert\lambda_i\rvert
+	$$
+	为$a$的谱半径。
+\end{definition}
+
+对于任何一种具有相容向量范数的矩阵范数$\lVert\cdot\rVert_\mathrm{m}$，
+有不等式
+$$
+	\forall a\in\F^{n\times n}\
+	\left(\rho(a)\leq\lVert a\rVert_\mathrm{m}\right).
+$$
+
+\begin{theorem}
+	设$a\in\F^{n\times n}$，
+	则
+	$$
+		\lim_{m\to+\infty}A^m=0\iff\rho(a)<1.
+	$$
+\end{theorem}
+
+\section{简单迭代法}
+\subsection{迭代公式}
+\subsubsection{迭代格式1}
+将$a\vec{x}=\vec{b}$改写为
+$$
+	\vec{x}=(I_n-a)\vec{x}+\vec{b}\triangleq c\vec{x}+\vec{b},
+$$
+则相应的迭代公式为
+$$
+	\vec{x}^{(n+1)}=c\vec{x}^{(n)}+\vec{b}\ (n\in\N),
+$$
+其中$c=I_n-a$称为\textit{迭代矩阵}。
+
+\subsubsection{迭代格式2（Jacobi迭代法）}
+用第$i$行解出$x_i$，
+得到
+$$
+	\forall i\in\N[1,n]\
+	\left(x_i=-\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)\frac{a_{i,j}}{a_{i,i}}x_j+\frac{b_i}{a_{i,i}}\right),
+$$
+即
+\begin{align*}
+	\vec{x}
+	 & =(\diag a)^{-1}(\diag a-a)\vec{x}+(\diag a)^{-1}\vec{b} \\
+	 & =(I_n-(\diag a)^{-1}a)\vec{x}+(\diag a)^{-1}\vec{b},
+\end{align*}
+相应的迭代公式为
+$$
+	\vec{x}^{(n+1)}=(I_n-(\diag a)^{-1}a)\vec{x}^{(n)}+(\diag a)^{-1}\vec{b}\ (n\in\N).
+$$
+
+实际计算时，
+常以
+$$
+	\lVert\vec{x}^{(m+1)}-\vec{x}^{(m)}\rVert_\infty<\varepsilon
+$$
+作为终止条件。
+
+\subsection{简单迭代法的收敛条件}
+设迭代公式为$\vec{x}^{(m+1)}=c\vec{x}^{(m)}+\vec{d}$。
+
+\begin{theorem}[简单迭代法收敛的充要条件]
+	简单迭代法收敛的充要条件是迭代矩阵的谱半径小于$1$，
+	即
+	$$
+		\rho(c)<1.
+	$$
+\end{theorem}
+
+计算谱半径是相当困难的，
+所以我们希望用别的办法判断收敛性。
+
+\begin{theorem}[简单迭代法收敛的充分条件]
+	设$\lVert\cdot\rVert_\mathrm{m}$为与向量范数$\lVert\cdot\rVert_\mathrm{v}$相容的矩阵范数。
+	如果
+	$$
+		\lVert c\rVert_\mathrm{m}<1,
+	$$
+	则简单迭代法必收敛，
+	且
+	\begin{gather*}
+		\forall n\in\N^*\
+		\left(\lVert\vec{x}^{(n)}-\vec{x}^*\rVert_\mathrm{v}\leq\frac{\lVert c\rVert_\mathrm{m}^n}{1-\lVert c\rVert_\mathrm{m}}\lVert\vec{x}^{(1)}-\vec{x}^{(0)}\rVert_\mathrm{v}\right)\\
+		\forall n\in\N^*\
+		\left(\lVert\vec{x}^{(n)}-\vec{x}^*\rVert_\mathrm{v}\leq\frac{\lVert c\rVert_\mathrm{m}}{1-\lVert c\rVert_\mathrm{m}}\lVert\vec{x}^{(n)}-\vec{x}^{(n-1)}\rVert_\mathrm{v}\right)
+	\end{gather*}
+\end{theorem}
+因此可以用
+$$
+	\lVert\vec{x}^{(n)}-\vec{x}^{(n-1)}\rVert_\mathrm{v}<\frac{1-\lVert c\rVert_\mathrm{m}}{\lVert c\rVert_\mathrm{m}}\varepsilon
+$$
+作为终止条件。
+
+Jacobi迭代法有其单独的收敛条件。
+\begin{definition}
+	若一个矩阵可以通过行变换和列变换等价为
+	$$
+		\begin{bmatrix}
+			\text{方阵} & \text{方阵} \\
+			          & \text{方阵}
+		\end{bmatrix}
+	$$
+	的形式，
+	则称该矩阵为可约矩阵，
+	否则称为不可约矩阵。
+\end{definition}
+\begin{definition}
+	若矩阵$a\in\F^{n\times n}$满足
+	$$
+		\forall i\in\N\cap[1,n]\
+		\left(\lvert a_{i,i}\rvert\geq\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)\lvert a_{i,j}\rvert\right),
+	$$
+	且
+	$$
+		\exists i\in\N\cap[1,n]\
+		\left(\lvert a_{i,i}\rvert>\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)\lvert a_{i,j}\rvert\right),
+	$$
+	则称$a$(弱)对角占优。
+\end{definition}
+\begin{theorem}[Jacobi迭代法收敛的充分条件]
+	若系数矩阵$a$为不可约且对角占优，
+	则Jacobi迭代法必收敛。
+\end{theorem}
+对于不可约但非对角占优的系数矩阵，
+往往可以通过交换方程次序使其变为对角占优，
+从而保证Jacobi迭代法收敛。
+为使迭代过程收敛快，
+应使对角线元素的绝对值尽可能大。
+
+\section{Seidel迭代法}
+\subsection{迭代格式}
+$$
+	x^{(m+1)}_i=
+	\sum_{j=1}^{i-1}c_{i,j}x^{(m+1)}_j+\sum_{j=i+1}^{n}c_{i,j}x^{(m)}_j+d_i\
+	(i,m\in\N,\ 1\leq i\leq n),
+$$
+可以简记为
+$$
+	\vec{x}^{(m+1)}\gets c_\mathrm{l}\vec{x}^{(m+1)}+c_\mathrm{u}\vec{x}^{(m)}+\vec{d}\ (m\in\N),
+$$
+其中
+$c_\mathrm{l}$为迭代矩阵$c$的下三角部分（不含对角线），
+$c_\mathrm{u}$为迭代矩阵$c$的上三角部分（\textbf{含}对角线）。
+
+如果采用简单迭代格式2（Jacobi迭代法），
+则相应的Seidel迭代公式为
+$$
+	x^{(m+1)}_i=
+	-\frac{1}{a_{i,i}}\left(\sum_{j=1}^{i-1}a_{i,j}x^{(m+1)}_j+\sum_{j=i+1}^{n}a_{i,j}x^{(m)}_j-b_i\right)\
+	(i,m\in\N,\ 1\leq i\leq n),
+$$
+可以简记为
+$$
+	\vec{x}^{(m+1)}\gets-d^{-1}(l\vec{x}^{(m+1)}+u\vec{x}^{(m)}-\vec{b}),
+$$
+其中
+$$
+	d=\diag a,\ a=l+d+u,
+$$
+$l$为$a$的下三角部分（不含对角线），
+$u$为$a$的上三角部分（不含对角线）。
+上式称为Gauss-Seidel迭代法。
+
+\subsection{收敛条件}
+\subsubsection{充要条件}
+将$\vec{x}^{(m+1)}\gets c_\mathrm{l}\vec{x}^{(m+1)}+c_\mathrm{u}\vec{x}^{(m)}+\vec{d}$改写为
+$$
+	(I_n-c_\mathrm{l})\vec{x}^{(m+1)}=c_\mathrm{u}\vec{x}^{(m)}+\vec{d},
+$$
+于是
+$$
+	\vec{x}^{(m+1)}=(I_n-c_\mathrm{l})^{-1}(c_\mathrm{u}\vec{x}^{(m)}+\vec{d}),
+$$
+即Seidel迭代法相当于迭代矩阵为$(I_n-c_\mathrm{l})^{-1}c_\mathrm{u}$的简单迭代法。
+于是可得其收敛的充要条件是迭代矩阵的谱半径$\rho((I_n-c_\mathrm{l})^{-1}c_\mathrm{u})<1$。
+
+\subsubsection{充分条件}
+三坨充分条件。
+
+\begin{theorem}[Gauss-Seidel迭代法收敛的充分条件]
+	若系数矩阵$a$为不可约且对角占优，
+	则Gauss-Seidel迭代法必收敛。
+\end{theorem}
+
+\begin{theorem}[Gauss-Seidel迭代法收敛的充分条件]
+	若系数矩阵$a$对称正定，
+	则Gauss-Seidel迭代法必收敛。
+\end{theorem}
+
+\section{松弛迭代法}
+对于$a\vec{x}=\vec{b}$，
+设第$i$行的残差为
+$$
+	r_i=\frac{1}{a_{i,i}}\left(b_i-\sum_{j=1}^{n}a_{i,j}x_j\right)=-x_i-\frac{1}{a_{i,i}}\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)a_{i,j}x_j+\frac{b_i}{a_{i,i}}.
+$$
+对于某一行，
+我们称通过修改某一个变量的值来使该行残差为零的过程为对该行实施\textit{松弛}。
+一般对第$i$个方程总是改变其第$i$个变量$x_i$的数值，
+使该方程的残差为零。
+
+设当$\vec{x}=\vec{x}^{(m)}$时，
+由上述规则确定的残差为$\vec{r}^{(m)}$。
+通过分别令$\vec{r}^{(m)}=\vec{0}$，
+可以得到
+$$
+	\hat{x}^{(m)}
+	=\left(-\frac{1}{a_{i,i}}\left(\sum_{j=1}^{i-1}+\sum_{j=i+1}^{n}\right)a_{i,j}x^{(m)}_j+\frac{b_i}{a_{i,i}}\right)_{i=1}^n.
+$$
+
+根据方程松弛顺序的不同策略，
+我们叙述以下几种松弛迭代法。
+
+\subsection{按$\lVert\vec{r}^{(m)}\rVert_\infty$实施松弛}
+每次选择所有行中残差绝对值最大的进行松弛。
+设第$m$次迭代时，
+我们选择了第$i^{{m}}$行，
+令
+$$
+	x^{(m+1)}_j=
+	\begin{cases}
+		x^{(m)}_j+w(\hat{x}^{(m)}_j-x^{(m)}_j) & (j=i^{(m)})     \\
+		x^{(m)}_j                              & (j\neq i^{(m)})
+	\end{cases}
+	=
+	\begin{cases}
+		x^{(m)}_j+wr^{(m)}_j & (j=i^{(m)})     \\
+		x^{(m)}_j            & (j\neq i^{(m)})
+	\end{cases}\
+	(i\in\N^*,\ i\leq n),
+$$
+其中$w$称为松弛因子。
+迭代直至残差均满足精度要求即可停止。
+
+\subsection{简单迭代方式下的逐次松弛法}
+每次直接将所有行依次松弛一次。
+$$
+	\vec{x}^{(m+1)}=\vec{x}^{(m)}+w\vec{r}^{{(m)}}\ (m\in\N).
+$$
+
+\subsection{Seidel迭代方式下的逐次松弛法}
+加上松弛因子$w$后，
+迭代公式为
+$$
+	\vec{x}^{(m+1)}
+	=\vec{x}^{(m)}+w(\hat{x}^{(m)}-\vec{x}^{(m)})
+	=(1-w)\vec{x}^{(m)}+w\hat{x}^{(m)}\ 
+	(m\in\N),
+$$
+其中的$\hat{x}^{(m)}$恰好也等于使用Gauss-Seidel迭代法计算得到的值。
+
+\subsection{松弛法的收敛条件}
+\begin{theorem}[松弛法收敛的必要条件]
+	只有当$0<w<2$时，
+	松弛法才可能收敛。
+\end{theorem}
+\begin{theorem}
+	若系数矩阵$a$对称正定，
+	则当$0<w<2$时，
+	松弛法必收敛。
+\end{theorem}
+\begin{theorem}
+	若系数矩阵$a$为不可约且对角占优，
+	则当$0<w\leq1$时，
+	松弛法必收敛。
+\end{theorem}
+
+\chapter{插值法}
+\section{不等距节点下的Newton基本差商公式}
+\subsection{差商}
+\begin{definition}
+	一元函数$f$在$x_0$处的的$0$阶差商定义为$f[x_0]=f(x_0)$；
+	在$x_0,\dots,x_n$处的$n$阶差商定义为
+	$$
+		f[x_0,x_1,\dots,x_n]=\frac{f[x_1,x_2,\dots,x_n]-f[x_0,x_1,\dots,x_{n-1}]}{x_n-x_0}.
+	$$
+\end{definition}
+
+\subsection{Newton基本差商公式的建立}
+\begin{definition}
+	设$x\in[\min_{i=0}^nx_i,\max_{i=0}^nx_i]$，
+	则$f(x)=P_n(x)+R_n(x)$，
+	其中
+	$$
+		P_n(x)=\sum_{i=0}^nf[x_0,\dots,x_i]\prod_{j=0}^{i-1}(x-x_j),
+	$$
+	称为Newton基本差商公式，
+	$$
+		R_n(x)=f[x_0,\dots,x_n,x]\prod_{i=0}^n(x-x_i)
+	$$
+	称为Newton基本差商公式的余式。
+\end{definition}
+
+\subsection{Newton基本差商公式的余式估计}
+\subsubsection{差商与导数的关系式}
+\begin{theorem}[差商与导数的关系式]
+	$$
+		\exists\xi\in\left[\min_{i=0}^nx_i,\max_{i=0}^nx_i\right]\
+		\left(f[x_0,\dots,x_n]=\frac{f^{(n))}(\xi)}{n!}\right).
+	$$
+\end{theorem}
+特别地，
+$$
+	f[\underbrace{x_0,\dots,x_0}_{(n+1)\text{个}x_0}]=\frac{f^{(n)}(x_0)}{n!}.
+$$
+
+\subsubsection{余式$R_n(x)$的估计}
+设$x_\mathrm{min}=\min\left\{\min_{i=0}^nx_i,x\right\},\ x_\mathrm{max}=\max\left\{\max_{i=0}^nx_i,x\right\}$，
+则
+$$
+	\exists\xi\in[x_\mathrm{min},x_\mathrm{max}]\
+	\left(R_n(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}\prod_{i=0}^n(x-x_i)\right).
+$$
+特别地，若$\forall i\in\N\cap[0.n]\ (x_i=x_0)$，则
+$$
+	\exists\xi\in[\min\{x_0,x\},\max\{x_0,x\}]\
+	\left(R_n(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}(x-x_0)^{n+1}\right).
+$$
+
+\begin{definition}
+	Define the Chebyshev polynomial of degree $n$ as
+	$$
+		T_n(x)=\cos(n\arccos x)\ (x\in[-1,1]).
+	$$
+\end{definition}
+
+\begin{theorem}
+	The choice of real numbers $x_0,\dots,x_n$ within interval $[a,b]$ that
+	minimizes the value of
+	$$
+		\max_{x\in[a,b]}\left\lvert\prod_{i=0}^n(x-x_i)\right\rvert
+	$$
+	is
+	$$
+		x_i=\frac{a+b}{2}+\frac{b-a}{2}\cos\left(\frac{2i+1}{2(n+1)}\pi\right)\
+		(i\in\N,\ i\leq n),
+	$$
+	and the minimum value is
+	$$
+		\frac{1}{2^n}\left(\frac{b-a}{2}\right)^{n+1},
+	$$
+	since $T_{n+1}\in[-1,1]$ and
+	$$
+		\prod_{i=0}^n(x-x_i)
+		=\frac{1}{2^n}\left(\frac{b-a}{2}\right)^{n+1}T_{n+1}\left(\frac{x-\frac{a+b}{2}}{\frac{b-a}{2}}\right).
+	$$
+\end{theorem}
+
+实际计算中亦可采用事后估计误差的方法，这是一种利用计算结果进行间接估计的方法。
+设$P_1(x)$是以节点$x_0,\dots,x_n$建立的插值公式，
+另取一个节点$x_{n+1}$，
+$P_2(x)$是以节点$x_1,\dots,x_{n+1}$建立的插值公式，
+则相应的余式为
+\begin{gather*}
+	R_1(x)=\frac{f^{(n+1)}(\xi_1)}{(n+1)!}\prod_{i=0}^n(x-x_i),\\
+	R_2(x)=\frac{f^{(n+1)}(\xi_2)}{(n+1)!}\prod_{i=1}^{n+1}(x-x_i),
+\end{gather*}
+若$f^{(n+1)}$在插值区间上变化较小，则两式相除得
+$$
+	\frac{f-P_2}{f-P_1}(x)
+	=\frac{R_2}{R_1}(x)
+	\approx\frac{x-x_{n+1}}{x-x_0},
+$$
+从而可得
+$$
+	R_2(x)=f(x)-P_2(x)\approx\frac{x-x_{n+1}}{x_{n+1}-x_0}(P_2-P_1)(x).
+$$
+
+\section{等距节点下得Newton基本差商公式及弗雷瑟图表法}
+\subsection{差分}
+\begin{definition}
+	设函数$f$在等距节点$x_0,\dots,x_n$上的值分别为$y_0,\dots,y_n$，
+	则称
+	$$
+		\Delta^0y_i=y_i\ (i\in\N,\ i\leq n)
+	$$
+	为$f$在$[x_i,x_i]$上的$0$阶差分，
+	称
+	$$
+		\Delta^jy_i=\Delta^{j-1}y_{i+1}-\Delta^{j-1}y_i\ (i,j\in\N,\ j\geq1,\ i\leq n-j)
+	$$
+	为$f$在$[x_i,x_{i+j}]$上的$j$阶差分。
+\end{definition}
+在间距恒为$h$的情况下，节点$x_i=x_0+hi\ (i\in\N,\ i\leq n)$，
+此时差商可以用差分表示为
+$$
+	f[x_i,\dots,x_{i+j}]=\frac{\Delta^jy_i}{j!h^j}\ (i,j\in\N,\ i\leq n-j).
+$$
+
+\subsection{Newton前插公式}
+\begin{definition}
+	定义广义二项式系数
+	$$
+		\binom{x}{m}=\frac{\prod_{i=0}^{m-1}(x-i)}{m!}\ (x\in\R,\ m\in\N).
+	$$
+\end{definition}
+
+取间距均为$h$的等距节点$x_0,\dots x_n$建立Newton基本差商公式，
+将各阶差商用差分表示，得
+$$
+	P_n(x)=\sum_{i=0}^n\binom{\frac{x-x_0}{h}}{i}\Delta^iy_0,
+$$
+相应的余式
+$$
+	R_n(x)=f^{(n+1)}(\xi)\binom{\frac{x-x_0}{h}}{n+1}h^{n+1}\ (\xi\in[x_0,x_n]).
+$$
+
+\subsection{Newton后插公式}
+在节点等距$h$的情况下以相反的顺序建立Newton基本差商公式得
+$$
+	P_n(x)=\sum_{i=0}^n\binom{\frac{x-x_n}{h}-1+i}{i}\Delta^iy_{n-i},
+$$
+相应的余式
+$$
+	R_n(x)=f^{(n+1)}(\xi)\binom{\frac{x-x_n}{h}+n}{n}h^{n+1}\ (\xi\in[x_0,x_n]).
+$$
+
+\subsection{Fraser图表及使用方法}
+相当神经病的想法。
+\subsubsection{Stirling插值公式}
+
+\subsubsection{Bézier插值公式}
+
+\section{不等距节点下的Lagrange插值公式}
+\subsection{公式的建立}
+$$
+	P_n(x)=\sum_{i=0}^ny_iL_i(x),
+$$
+其中
+$$
+	L_i(x)
+	=\frac{\left(\prod_{j=0}^{i-1}\cdot\prod_{j=i+1}^n\right)(x-x_j)}{\left(\prod_{j=0}^{i-1}\cdot\prod_{j=i+1}^n\right)(x_i-x_j)}
+	=\left(\prod_{j=0}^{i-1}\cdot\prod_{j=i+1}^n\right)\frac{x-x_j}{x_i-x_j}\
+	(i\in\N,\ i\leq n).
+$$
+余式与Newton基本差商公式相同。
+
+有一个奇妙性质可以用来检验计算正确性：
+\begin{theorem}
+	$$
+		\sum_{i=0}^nL_i(x)\equiv1.
+	$$
+\end{theorem}
+
+\subsection{舍入误差估计}
+舍入误差
+$$
+	\lvert\epsilon\rvert\leq\lvert\Delta y\rvert\sum_{i=0}^n\lvert L_i(x)\rvert,
+$$
+$$
+	\sum_{i=0}^n\lvert L_i(x)\rvert
+	\begin{cases}
+		=\sum_{i=0}^nL_i(x)=1 & (\forall i\in\N\cap[0,n]\ (L_i(x)\geq0)) \\
+		>1                    & \text{(otherwise)}
+	\end{cases}.
+$$
+
+\section{等距节点下的Lagrange插值公式}
+\subsection{等距节点下的Lagrange插值公式}
+设间距为$h$，则
+$$
+	L_i(x)=(-1)^{n-i}\frac{n+1}{\frac{x-x_0}{h}-i}\binom{\frac{x-x_0}{h}}{n+1}\binom{n}{i}\
+	(i\in\N,\ i\leq n,\ x\neq x_0+hi).
+$$
+
+\subsection{等距节点下的分段线性插值公式}
+取$q=\left\lfloor\frac{x-x_0}{h}\right\rfloor,\ r=\frac{x}{h}-q$，
+则线性插值函数
+$$
+	P(x)=f(x_q)+(f(x_{q+1})-f(x_q))r.
+$$
+特别地，若$x_0=0,\ h=\frac{1}{2^p}$，则
+$$
+	q=\lfloor2^px\rfloor,\ r=2^px-q.
+$$
+
+\subsection{等距节点下的分段三点插值公式}
+取$q=\left\lfloor\frac{x-x_0}{h}+\frac{1}{2}\right\rfloor, \ t=\frac{x-x_q}{h}$，
+则
+$$
+	P(x)=\frac{1}{2}t(t-1)y_{q-1}-(t+1)(t-1)y_q+\frac{1}{2}t(t+1)y_{q+1}.
+$$
+
+\section{插值公式的唯一性及其应用}
+\subsection{插值公式的唯一性}
+
+\subsection{插值公式的应用}
+
+\section{反插值}
+\subsection{使用反函数的插值法}
+
+\subsection{利用正函数插值公式的反插值法}
+\subsubsection{方法描述}
+已知$y$，反求$x=f^{-1}(y)$。
+
+设$y\in[y_0,y_1],\ x\in[x_0,x_1]$。根据Newton基本差商公式，
+$$
+	y\approx\sum_{i=0}^nf[x_0,\dots,x_i]\prod_{j=0}^{i-1}(x-x_j),
+$$
+\begin{enumerate}
+	\item 等价于
+	      $$
+		      f[x_0,x_1](x-x_0)=y-f(x_0)-\sum_{i=2}^nf[x_0,\dots,x_i]\prod_{j=0}^{i-1}(x-x_j),
+	      $$
+	      于是有迭代式
+	      $$
+		      x^{(m+1)}=x_0+\frac{y-f(x_0)}{f[x_0,x_1]}-\sum_{i=2}^{m+1}\frac{f[x_0,\dots,x_i]}{f[x_0,x_1]}\prod_{i=0}^{n}(x^{(m)}-x_j)\
+		      (m\in\N^*),
+	      $$
+	      取初值
+	      $$
+		      x^{(1)}=x_0+\frac{y-f(x_0)}{f[x_0,x_1]}.
+	      $$
+
+	\item 等价于
+	      $$
+		      y-f(x_0)=(x-x_0)\sum_{i=1}^nf[x_0,\dots,x_i]\prod_{j=1}^{i-1}(x-x_j),
+	      $$
+	      于是有迭代式
+	      $$
+		      x^{(m+1)}=x_0+\frac{y-f(x_0)}{\sum_{i=1}^{m+1}f[x_0,\dots,x_i]\prod_{j=1}^{i-1}(x^{(m)}-x_j)}\
+		      (m\in\N),
+	      $$
+	      可以任取初值$x^{(0)}$，因为$x^{(1)}$与$x^{(0)}$无关。
+\end{enumerate}
+
+对于等距节点的情形，可改用等距节点下的插值公式。
+
+\subsubsection{误差估计}
+设真实值$x^*=f^{-1}(y)$，
+估计值$x=P^{-1}(y)$，
+余项$R=f-P$，
+则绝对误差
+$$
+	\lvert x-x^*\rvert\leq\frac{\lvert R(x)\rvert}{\min_{\xi\in(\min\{x,x^*\},\max\{x,x^*\})}\lvert f'(\xi)\rvert}.
+$$
+
+
+\section{Hermite插值多项式}
+分别已知节点$x_0,\dots,x_n$处的各阶导数$y^{(0)}_0,\dots,y^{(m_0)}_0,\dots,y^{(n)}_n,\dots,y^{(m_n)}_n$，
+由此确定多项式
+$$
+	P(x)=\sum_{j=0}^{\sum_{i=0}^n(m_i+1)}a_jx^j.
+$$
+朴素方法是解出这个$\sum_{i=0}^n(m_i+1)$元线性方程组。
+
+\subsection{Newton型Hermite插值公式}
+重节点的差商可由高阶导数值算出，即
+$$
+	f[\underbrace{x_i,\dots,x_i}_{(j+1)\text{个}x_i}]=\frac{y^{(j)}_i}{j!}\
+	(i,j\in\N,\ i\leq n,\ j\leq m_i).
+$$
+所以可在Newton基本差商公式中使用这些差商，
+得到Newton型Hermite插值公式。
+在
+$$
+	\underbrace{x_0,\dots,x_0}_{(m_0+1)\text{个}x_0},
+	\dots,
+	\underbrace{x_n,\dots,x_n}_{(m_n+1)\text{个}x_n},
+$$
+上插值得
+$$
+	P(x)=\sum_{i=0}^n\left(\prod_{j=0}^{i-1}(x-x_j)^{m_j+1}\right)\sum_{j=0}^{m_i}f[\underbrace{x_0,\dots,x_0}_{(m_0+1)\text{个}x_0},\dots,\underbrace{x_{i-1},\dots,x_{i-1}}_{(m_{i-1}+1)\text{个}x_{i-1}},\underbrace{x_i,\dots,x_i}_{(j+1)\text{个}x_i}](x-x_i)^j
+$$
+
+\subsection{降阶型Hermite插值公式}
+考虑$\forall i\in\N\cap[0,n]\ (m_i=m)$的情况，
+即各个节点均知晓从$0$到$m$阶的导数值。
+\begin{enumerate}
+	\item 利用Lagrange插值匹配函数值
+
+	      利用所有的函数值（$0$阶导数值）构造$n$次拉格朗日插值多项式
+	      $$
+		      L_n(x)=\sum_{i=0}^ny_il_i(x),
+	      $$
+	      其中$l_i\ (i\in\N,\ l\leq n)$是Lagrange基函数。
+	      此时有$\forall i\in\N\cap[0,n]\ (L_n(x_i)=y_i)$，
+	      但通常不满足导数值条件。
+
+	\item 构造修正项（降阶）
+
+	      引入修正项，
+	      设最终的Hermite插值多项式为
+	      $$
+		      H_{2n+1}(x)=L_n(x)+\varpi(x)P_n(x),
+	      $$
+	      其中$P$是一个待定的$n$次多项式，
+	      与之相乘的$\varpi(x)=\prod_{i=0}^n(x-x_i)$保证了修正项不会破坏之前的函数值匹配条件。
+
+	\item 代入导数条件
+
+	      求导，
+	      $$
+		      H_{2n+1}'(x)=L_n'(x)+\varpi'(x)P_n(x)+\varpi(x)P_n'(x),
+	      $$
+	      代入$(x_i,y'_i)$得
+	      $$
+		      y'_i=L_n'(x_i)+\varpi'(x_i)P_n(x_i)+0,
+	      $$
+	      于是在各节点处
+	      $$
+		      P_n(x_i)=\frac{y'_i-L_n'(x_i)}{\varpi'(x_i)}\ (i\in\N,\ i\leq n),
+	      $$
+	      这又是一个插值问题！
+	      于是我们可以递归地解出$P_n$。
+	      递归的边界是没有已知的下一阶导数值了，
+	      这时只需用普通的Lagrange插值即可。
+\end{enumerate}
+
+让我们严格地描述以上过程：
+我们要得到的是这样一个多项式
+$$
+	H(x)=\sum_{i=0}^m(\varpi(x))^iP_i(x),
+$$
+其中
+\begin{itemize}
+	\item $\varpi(x)=\prod_{i=0}^n(x-x_i)$。
+	\item $P_i\ (i\in\N,\ i\leq n)$是第$i$层的修正多项式，
+	      他们可以通过以下步骤得到：
+	      \begin{enumerate}
+		      \item 第$0$层
+
+		            对$\{(x_i,y^{(0)}_i)\}_{i=0}^n$做Lagrange插值，
+		            得到多项式$P_0$。
+
+		      \item 第$(i+1)\ (i\in\N,\ i<n)$层
+
+		            令
+		            $$
+			            H_i(x)=\sum_{j=0}^i(\varpi(x))^jP_j(x),
+		            $$
+		            对于节点$j\in\N,\ j\leq n$，
+		            由$H_i^{(i+1)}(x_j)+(i+1)!(\varpi'(x))^{i+1}=H^{(i+1)}(x_j)=y^{(i+1)}_j$
+		            （这里利用了$\varpi(x_j)=0\ (j\in\N,\ j\leq n)$，
+		            所以等式最左边才能如此简单）
+		            得
+		            $$
+			            P_i(x_j)=\frac{y^{(i+1)}_j-H_i^{(i+1)}(x_j)}{(i+1)!(\varpi'(x_j))^{i+1}}.
+		            $$
+		            计算出所有$\{(x_j,P_i(x_j))\}_{j=0}^n$，做Lagrange插值得到$P_i$表达式。
+	      \end{enumerate}
+\end{itemize}
+
+\subsection{Lagrange型Hermite插值公式}
+
+\section{三次样条插值}
+给定插值点$\{(x_i,y_i\}_{i=1}^n$，
+对每个区间用一个三次函数插值，
+使这个分段函数在整个插值区间上二阶光滑。
+
+不妨设$\{x_i\}_{i=1}^n$单调递增。
+
+\chapter{数值积分和数值微分}
+\section{数值积分}
+\subsection{对称的求积公式}
+不讲。
+
+\subsection{Newton-Cotes求积公式}
+\subsubsection{方法描述}
+对于积分区间$[a,b]$做$n$段共$(n+1)$个点的等距插值，
+即设
+$$
+	h=\frac{b-a}{n},\ x_i=a+hi\ (i\in\N,\ i\leq n).
+$$
+根据等距节点下的Lagrange插值公式，
+如果设
+$$
+	l_i(t)=(-1)^{n-i}\frac{n+1}{t-i}\binom{t}{n+1}\binom{n}{i}\
+	(i\in\N,\ i\leq n),
+$$
+则此时的Lagrange基函数为$l_i\left(\frac{x-x_0}{h}\right)\ (i\in\N,i\leq n)$。
+于是定积分
+$$
+	\int_{a}^{b}f(x)\d x
+	\approx\int_{a}^{b}\sum_{i=0}^{n}f(x_i)l_i\left(\frac{x-x_0}{h}\right)\d x
+	=\sum_{i=0}^{n}f(x_i)\int_{a}^{b}l_i\left(\frac{x-x_0}{h}\right)\d x.
+$$
+其中
+$$
+	\int_{a}^{b}l_i\left(\frac{x-x_0}{h}\right)\d x
+	=(b-a)\cdot\frac{1}{n}\int_{0}^{n}l_i(t)\d t\
+	(i\in\N,\ i\leq n),
+$$
+后项$\frac{1}{n}\int_{0}^{n}l_i(t)\d t\triangleq c_i^{(n)}$称为Newton-Cotes系数，
+只与$n,i$有关而与$f,a,b$均无关，
+故可以预先计算。
+\begin{table}[H]
+	\centering
+	\begin{tabular}{|c|c|c|c|c|c|c|c|}
+		\hline
+		$n$ & \multicolumn{7}{c|}{$c_i^{(n)}$}                                                                                                                      \\
+		\hline
+		$1$ & $\frac{1}{2}$                    & $\frac{1}{2}$     &                  &                   &                  &                   &                  \\
+		\hline
+		$2$ & $\frac{1}{6}$                    & $\frac{4}{6}$     & $\frac{1}{6}$    &                   &                  &                   &                  \\
+		\hline
+		$3$ & $\frac{1}{8}$                    & $\frac{3}{8}$     & $\frac{3}{8}$    & $\frac{1}{8}$     &                  &                   &                  \\
+		\hline
+		$4$ & $\frac{7}{90}$                   & $\frac{32}{90}$   & $\frac{12}{90}$  & $\frac{32}{90}$   & $\frac{7}{90}$   &                   &                  \\
+		\hline
+		$5$ & $\frac{19}{288}$                 & $\frac{75}{288}$  & $\frac{50}{288}$ & $\frac{50}{288}$  & $\frac{75}{288}$ & $\frac{19}{288}$  &                  \\
+		\hline
+		$6$ & $\frac{41}{840}$                 & $\frac{216}{840}$ & $\frac{27}{840}$ & $\frac{272}{840}$ & $\frac{27}{840}$ & $\frac{216}{840}$ & $\frac{41}{840}$ \\
+		\hline
+	\end{tabular}
+	\caption{Newton-Cotes系数表的一部分}
+\end{table}
+由$\{l\}_{i=0}^n$的对称性可得$\{c_i^{(n)}\}_{i=0}^n$的对称性，
+即$c_i^{(n)}=c_{n-i}^{(n)}\ (i\in\N,\ i\leq n)$。
+
+于是有Newton-Cotes求积公式：
+$$
+	\int_{a}^{b}f(x)\d x\approx(b-a)\sum_{i=0}^{n}f(x_i)c_i^{(n)}.
+$$
+
+当$n=1$时，
+Newton-Cotes求积公式即为\textbf{梯形公式（Trapezoid Rule）}：
+$$
+	\int_{a}^{b}f(x)\d x\approx\frac{1}{2}(f(a)+f(b))(b-a)=\frac{1}{2}h(f(x_0)+f(x_1)).
+$$
+
+当$n=2$时，
+Newton-Cotes求积公式即为\textbf{Simpson公式（Simpson's Rule）}：
+$$
+	\int_{a}^{b}f(x)\d x\approx\frac{1}{6}\left(f(a)+f\left(\frac{1}{2}(a+b)\right)+f(b)\right)(b-a)=\frac{1}{3}h(f(x_0)+4f(x_1)+f(x_2))).
+$$
+
+当$n=4$时，
+Newton-Cotes求积公式即为Cotes公式：
+$$
+	\int_{a}^{b}f(x)\d x\approx\frac{2}{45}h(7f(x_0)+32f(x_1)+12f(x_2)+32f(x_3)+7f(x_4)).
+$$
+
+\subsubsection{误差估计}
+\begin{definition}[代数精度（degree of precision）]
+	The \textbf{degree of precision} of a numerical integration method is
+	the greatest integer $d$ for which
+	all degree $d$ or less polynomials are integrated exactly by the method.
+\end{definition}
+
+\begin{theorem}[Newton-Cotes求积公式的代数精度]
+	$n$阶Newton-Cotes求积公式至少具有$(n+1-n\bmod2)$次代数精度。
+\end{theorem}
+
+\paragraph{截断误差}
+对$f$做$n$段等距Lagrange插值时，
+$$
+	f=L+R,
+$$
+其中余项
+$$
+	R(x)=\frac{f^{(n+1)}(\xi)}{(n+1)!}\prod_{i=0}^{n}(x-x_i)\ (\xi\in[a,b]).
+$$
+当我们做积分时，
+$$
+	\int_{a}^{b}R(x)\d x
+	=\frac{1}{(n+1)!}\int_{a}^{b}f^{(n+1)}(\xi_0)\left(\prod_{i=0}^{n}(x-x_i)\right)\d x
+	\approx f^{(n+1)}(\xi)h^{n+2}\int_{0}^{n}\binom{t}{n+1}\d t\
+	(\xi\in[a,b]).
+$$
+由此可得梯形公式的截断误差
+$$
+	R_1=-\frac{f^{(2)}(\xi)}{12}h^3\ (\xi\in[a,b]),
+$$
+Simpson公式的截断误差
+$$
+	R_2=-\frac{f^{(4)}(\xi)}{90}h^5\ (\xi\in[a,b]).
+$$
+
+\paragraph{舍入误差}
+设计算$f$和$c$的舍入误差不超过$\varepsilon$，
+则Newton-Cotes求积公式引入的舍入误差不超过
+$$
+	(b-a)\varepsilon\sum_{i=0}^{n}(\lvert f(x_i)\rvert+\lvert c_i^{(n)}\rvert).
+$$
+由于
+$$
+	\sum_{i=0}^{n}\lvert c_i^{(n)}\rvert
+	\begin{cases}
+		=1 & (\forall i\in\N\cap[0,n]\ (c_i^{(n)}>0)) \\
+		>1 & \text{(otherwise)}
+	\end{cases},
+$$
+所以当Newton-Cotes系数有正有负时（$n\geq8$），
+其舍入误差较大，
+故一般只使用$n\leq7$的Newton-Cotes求积公式。
+
+\subsection{复化求积公式}
+为解决高次插值引起的Runge现象，
+我们采用分段低次插值的方法；
+为解决高阶Newton-Cotes求积公式数值不稳定的问题，
+我们也将积分区间划分为若干子区间，
+分别用低次求积公式积分后再求和。
+
+\subsubsection{方法描述}
+\textbf{复化梯形公式（Composite Trapezoid Rule）}：
+设积分区间$[a,b]$被划分为$m$个子区间，
+$h=\frac{b-a}{m}$，
+$x_i=a+ih\ (i\in\N,\ i\leq m)$，
+则
+$$
+	\int_{a}^{b}f(x)\d x
+	=\frac{1}{2}h\left(f(x_0)+2\sum_{i=1}^{m-1}f(x_i)+f(x_m)\right)-\sum_{i=0}^{m-1}\frac{1}{12}f^{(2)}(\xi_i)h^3\
+	(\xi_i\in[x_i,x_{i+1}], i\in\N\cap[0,m)).
+$$
+误差项也可以写成
+$$
+	\frac{1}{12}h^3\sum_{i=0}^{m-1}f^{(2)}(\xi_i)
+	=\frac{1}{12}h^3m f^{(2)}(\xi)
+	=\frac{1}{12}(b-a)h^2 f^{(2)}(\xi)
+	\ (\xi\in[a,b]).
+$$
+
+\textbf{复化Simpson公式（Composite Simpson's Rule）}
+设积分区间$[a,b]$被划分为$2m$个子区间，
+$h=\frac{b-a}{2m}$，
+$x_i=a+ih\ (i\in\N,\ i\leq 2m)$，
+则
+\begin{gather*}
+	\int_{a}^{b}f(x)\d x
+	=\frac{1}{3}h\left(f(x_0)+2\sum_{i=1}^{m-1}f(x_{2i})+4\sum_{i=0}^{m-1}f(x_{2i+1})+f(x_{2m})\right)-\sum_{i=0}^{m-1}\frac{1}{90}f^{(4)}(\xi_i)h^5\\
+	(\xi_i\in[x_{2i},x_{2i+2}], i\in\N\cap[0,m)).
+\end{gather*}
+误差项也可以写成
+$$
+	\frac{1}{90}h^5\sum_{i=0}^{m-1}f^{(4)}(\xi_i)
+	=\frac{1}{90}h^5m f^{(4)}(\xi)
+	=\frac{1}{180}(b-a)h^4 f^{(4)}(\xi)
+	\ (\xi\in[a,b]).
+$$
+
+\section{Romberg法}
+$$
+	\begin{array}{rl}
+		1 & \textbf{function }romberg(f,a,b,\varepsilon)                                                                         \\
+		2 & \qquad R_{0,0}\gets\frac{1}{2}(b-a)(f(a)+f(b))                                                                       \\
+		3 & \qquad\textbf{for }i\in\N\cap[1,+\infty)                                                                             \\
+		4 & \qquad\qquad h\gets\frac{b-a}{2^i}                                                                                   \\
+		5 & \qquad\qquad R_{i,0}\gets\frac{1}{2}R_{i-1,0}+h\sum_{j=0}^{2^{i-1}-1}f\left(a+h(2j+1)\right)                         \\
+		6 & \qquad\qquad\textbf{for }j\in\N\cap[1,i]                                                                             \\
+		7 & \qquad\qquad\qquad R_{i,j}\gets \frac{4^jR_{i,j-1}-R_{i-1,j-1}}{4^j-1}=R_{i,j-1}+\frac{R_{i,j-1}-R_{i-1,j-1}}{4^j-1} \\
+		8 & \qquad\qquad\textbf{if }\lvert R_{j,j}-R_{j-1,j-1}\rvert<\varepsilon                                                 \\
+		9 & \qquad\qquad\qquad\textbf{return }R_{j,j}                                                                            \\
+	\end{array}
+$$
+
+\end{document}
