@@ -1,0 +1,660 @@
+\documentclass[UTF8]{article}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{caption}
+\usepackage{ctex}
+\usepackage{float}
+\usepackage{fontspec}
+\usepackage{graphicx}
+\usepackage[colorlinks=true,linkcolor=blue,hidelinks,unicode]{hyperref}
+\usepackage{mathrsfs}
+\usepackage{minted}
+\usepackage{fancyhdr}
+
+\usepackage[a4paper,margin=2cm]{geometry}
+\newcommand{\ssection}[1]{\section*{#1}\phantomsection\addcontentsline{toc}{section}{#1}}
+\newcommand{\ssubsection}[1]{\subsection*{#1}\phantomsection\addcontentsline{toc}{subsection}{#1}}
+\newcommand{\ssubsubsection}[1]{\subsubsection*{#1}\phantomsection\addcontentsline{toc}{subsubsection}{#1}}
+
+\newtheorem{definition}{Definition}[section]
+\newtheorem{lemma}{Lemma}[section]
+\newtheorem{theorem}{Theorem}[section]
+% \newtheorem{definition}{定义}[section]
+% \newtheorem{lemma}{引理}[section]
+% \newtheorem{theorem}{定理}[section]
+
+\def\diff{\mathop{}\hphantom{\mskip-\thinmuskip}\mathrm{d}}
+\let\daccent\d
+\let\d\relax
+\newcommand\d{\ifmmode\diff\else\expandafter\daccent\fi}
+
+\newcommand{\e}{\mathrm{e}}
+\newcommand{\N}{\mathbb{N}}
+\newcommand{\Z}{\mathbb{Z}}
+\newcommand{\Q}{\mathbb{Q}}
+\newcommand{\R}{\mathbb{R}}
+\newcommand{\C}{\mathbb{C}}
+\newcommand{\F}{\mathbb{F}}
+
+\newcommand{\sgn}{\mathop{\mathrm{sgn}}}
+\newcommand{\argmin}{\mathop{\mathrm{argmin}}}
+\newcommand{\argmax}{\mathop{\mathrm{argmax}}}
+
+\newcommand{\powset}{\mathop{\mathscr{P}}}
+\newcommand{\ran}{\mathop{\mathrm{ran}}}
+\newcommand{\dom}{\mathop{\mathrm{dom}}}
+\newcommand{\card}{\mathop{\mathrm{card}}}
+
+\setmonofont{Ubuntu Mono}
+\usemintedstyle{borland}
+\setminted{tabsize=4}
+\setminted{linenos=true, numbersep=5pt}
+\setminted{bgcolor=gray!12}
+\renewcommand{\theFancyVerbLine}{\small\ttfamily\arabic{FancyVerbLine}}
+
+% \pagestyle{empty}
+
+\title{数值分析上机实验报告	}
+\author{彭浩然 1120242091}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+\newpage
+
+\section{实验目标}
+\begin{enumerate}
+	\item 熟悉各种数值计算方法，
+	      例如数值微分、方程的迭代解法等。
+	\item 利用可视化方法加深对数值计算方法的理解
+	      （不过如果我都能自己写代码实现了，难道还需要可视化来帮助理解吗……）。
+	\item 掌握数值计算方法的编程实现，
+	      提高编程能力。
+	\item 体会各种方法的优缺点，
+	      了解数值计算方法的适用范围。
+\end{enumerate}
+
+\section{实验内容}
+\subsection{数值微分方法}
+数值微分是通过对函数在某一点附近的取值进行计算，
+来近似求解该函数在该点处的导数值。
+数值分析本来课堂上是没有讲的，
+但后面牛顿法要用，
+所以这里干脆简单实现一下。
+
+\paragraph{三点中心差分公式}
+这大约是最简便的方法。
+$$
+	f'(x)=\frac{f(x+h)-f(x-h)}{2h}-\frac{h^2}{6}f'''(\xi)\ (\xi\in(x-h,x+h)).
+$$
+其正确性在带Lagrange余项的Taylor定理视角下是显然的。
+
+从数学上看，
+$h$越小，计算值越接近真实的导数值。
+然而在数值计算中，
+$h$减小会导致计算除法时分母过小，
+同时分子上是两个接近的数相减，
+从而引入较大的舍入误差。
+因此，
+我们需要在截断误差与舍入误差之间进行权衡，
+选出一个合适的$h$值。
+理论计算和经验都表明，
+对于双精度浮点数（这也是大多数主流编程语言的默认浮点数类型），
+选择$h=\sqrt[3]{\frac{3\varepsilon_\mathrm{mach}}{M}}\approx10^{-5}$是使结果精度最高的步长，
+其中$\varepsilon_\mathrm{mach}$是机器精度，
+$M$是函数$f$在区间$[x-h,x+h]$上三阶导数绝对值的上界。
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1 & \textbf{function }get\_derivative\_of(f,x,h)           \\
+		2 & \qquad\textbf{return }x\mapsto\frac{f(x+h)-f(x-h)}{2h} \\
+	\end{array}
+$$
+
+\subsection{一元方程的迭代解法}
+\subsubsection{二分法}
+二分查找非常朴素，
+但又相当高效（$O\left(\log\frac{r-l}{\varepsilon}\right)$的时间复杂度）、稳定且可靠。
+二分法对函数要求也很低，
+只要连续即可。
+当然，
+有根区间并不是总能轻易找到。
+
+\paragraph{零点存在定理}
+若$f\in C[a,b]$
+且$f(a)f(b)<0$（即在区间端点处函数值异号），
+则
+$$
+	\exists c\in(a,b)\ (f(c)=0).
+$$
+即函数$f$在区间$(a,b)$上至少有一个零点。
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }bisection(f,l,r,\varepsilon) \\
+		2  & \qquad\textbf{while }r-l>\varepsilon           \\
+		3  & \qquad\qquad m\gets\frac{l+r}{2}               \\
+		4  & \qquad\qquad\textbf{if }f(m)=0                 \\
+		5  & \qquad\qquad\qquad\textbf{return }m            \\
+		6  & \qquad\qquad\textbf{if }\sgn f(l)=\sgn f(m)    \\
+		7  & \qquad\qquad\qquad l\gets m                    \\
+		8  & \qquad\qquad\textbf{else}                      \\
+		9  & \qquad\qquad\qquad r\gets m                    \\
+		10 & \qquad\textbf{return }\frac{l+r}{2}            \\
+	\end{array}
+$$
+
+\subsubsection{Aitken加速收敛法}
+对于不动点形式的方程$x=\varphi(x)$，
+引入参数$\theta\notin\{0,1\}$。
+将等式$x=\varphi(x)$两边同时减去$\theta x$，
+得
+$$
+	(1-\theta)x=\varphi(x)-\theta x,
+$$
+同时除以$(1-\theta)$得
+$$
+	x=\frac{1}{1-\theta}(\varphi(x)-\theta x)\triangleq\psi(x).
+$$
+于是迭代公式为
+$$
+	x^{(n+1)}=\psi(x^{(n)})=\frac{1}{1-\theta}(\varphi(x^{(n)})-\theta x^{(n)})\ (n\in\N).
+$$
+
+在Aitken方法中，
+我们对$x^{(n)}$迭代两次得到三个相邻得迭代值$x^{(n)},y^{(n)}=\varphi(x^{(n)}),z^{(n)}=\varphi(y^{(n)})$。
+取割线斜率作为参数$\theta^{(n)}$，即
+$$
+	\theta^{(n)}=\frac{z^{(n)}-y^{(n)}}{y^{(n)}-x^{(n)}},
+$$
+则新的迭代公式为
+$$
+	x^{(n+1)}=\frac{1}{1-\theta^{(n)}}(y^{(n)}-\theta^{(n)}x^{(n)})\ (n\in\N).
+$$
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }aitken(\varphi,x_0,\varepsilon,m)                                                   \\
+		2  & \qquad x\gets x_0                                                                                     \\
+		3  & \qquad\textbf{for }n\in\N\cap[0,m)                                                                    \\
+		4  & \qquad\qquad y\gets\varphi(x)                                                                         \\
+		5  & \qquad\qquad z\gets\varphi(y)                                                                         \\
+		6  & \qquad\qquad x_{\text{new}}\gets\frac{xz-y^2}{x-2y+z}\textit{ // equivalent, but less rounding error} \\
+		7  & \qquad\qquad\textbf{if }|x_{\text{new}}-x|<\varepsilon                                                \\
+		8  & \qquad\qquad\qquad\textbf{return }x_{\text{new}}                                                      \\
+		9  & \qquad\qquad x\gets x_{\text{new}}                                                                    \\
+		10 & \qquad\textbf{return }x\textit{ // not converged}                                                     \\
+	\end{array}
+$$
+
+\subsubsection{Newton迭代法}
+对于满足条件的函数，
+某一点处的切线与$x$轴的交点往往比该点本身更接近函数的零点。
+因此，
+可以利用切线与$x$轴的交点来逐步逼近零点。
+
+在点$(x^{(n)},f(x^{(n)}))$处的切线方程为
+$$
+	y-f(x^{(n)})=f'(x^{(n)})(x-x^{(n)}),
+$$
+我们将其与$x$轴的交点取为下一轮的估计值，即
+$$
+	x^{(n+1)}=x^{(n)}-\frac{f(x^{(n)})}{f'(x^{(n)})}\ (n\in\N).
+$$
+
+利用前面提到的数值微分方法可以很方便地计算$f'(x^{(n)})$的近似值，
+从而实现Newton迭代法。
+不过，
+迭代收敛的判断有两个标准：
+\begin{itemize}
+	\item 两次迭代结果之差的绝对值小于阈值，即$|x^{(n+1)}-x^{(n)}|<\varepsilon$。
+	\item 函数值的绝对值小于阈值，即$|f(x^{(n)})|<\varepsilon$。
+\end{itemize}
+这两个标准各有优缺点，
+前者更关注结果的准确性，
+后者更关注结果的有效性。
+这里我们干脆两个都用上，
+只要满足其一——要么找到了解（虽然可能不精确），
+要么收敛在某个点（虽然可能不是零点）——即停止迭代。
+这么做是合理的，
+因为如果只有一个条件满足而另一个条件不满足，
+继续迭代也不会让情况变好。
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }newton(f,x_0,\varepsilon,m,h)                     \\
+		2  & \qquad f'\gets get\_derivative\_of(f,h)                             \\
+		3  & \qquad\textbf{for }n\in\N\cap[0,m)                                  \\
+		4  & \qquad\qquad\textbf{if }\lvert f(x_0)\rvert<\varepsilon             \\
+		5  & \qquad\qquad\qquad\textbf{return }x_0                               \\
+		6  & \qquad\qquad\textbf{if }\lvert f'(x_0)\rvert<\varepsilon            \\
+		7  & \qquad\qquad\qquad\textbf{break}\textit{ // to avoid division by 0} \\
+		8  & \qquad\qquad d\gets-\frac{f(x_0)}{f'(x_0)}                          \\
+		9  & \qquad\qquad x\gets x_0+d                                           \\
+		10 & \qquad\qquad\textbf{if }\lvert d\rvert<\varepsilon                  \\
+		11 & \qquad\qquad\qquad\textbf{return }x                                 \\
+		12 & \qquad\qquad x_0\gets x                                             \\
+		13 & \qquad\textbf{return }x_0\textit{ // not converged}                 \\
+	\end{array}
+$$
+
+\subsubsection{Newton下山法}
+当Newton迭代法在某些情况下发散时，
+可以通过引入步长参数$\lambda\in(0,1]$来缓解该问题。
+具体地，
+我们将迭代公式修改为
+$$
+	x^{(n+1)}=x^{(n)}-\lambda\frac{f(x^{(n)})}{f'(x^{(n)})}\ (n\in\N).
+$$
+通过适当选择步长参数$\lambda$，
+可以在一定程度上控制迭代过程，
+从而提高收敛性。
+通常情况下，
+可以通过试探法来选择合适的$\lambda$值，
+即从较大的值开始逐渐减小，
+直到找到一个使得迭代结果收敛的步长。
+这里我们选择$\lambda=2^{-i}\ (i\in\N)$，
+即每次减半，
+直到找到合适的步长，
+或者$\lambda$过小以至于无法引起$x$的变化为止。
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }newton\_downhill(f,x_0,\varepsilon,m,h)                                                                                                                                            \\
+		2  & \qquad f'\gets get\_derivative\_of(f,h)                                                                                                                                                              \\
+		3  & \qquad\textbf{for }n\in\N\cap[0,m)                                                                                                                                                                   \\
+		4  & \qquad\qquad\textbf{if }\lvert f(x_0)\rvert<\varepsilon                                                                                                                                              \\
+		5  & \qquad\qquad\qquad\textbf{return }x_0                                                                                                                                                                \\
+		6  & \qquad\qquad\textbf{if }\lvert f'(x_0)\rvert<\varepsilon                                                                                                                                             \\
+		7  & \qquad\qquad\qquad\textbf{break}\textit{ // to avoid division by 0}                                                                                                                                  \\
+		8  & \qquad\qquad d\gets1                                                                                                                                                                                 \\
+		9  & \qquad\qquad\textbf{while }\left\lvert f\left(x_0-\frac{f(x_0)}{d\cdot f'(x_0)}\right)\right\rvert>\lvert f(x_0)\rvert\textbf{ and }\left\lvert\frac{f(x_0)}{d\cdot f'(x_0)}\right\rvert>\varepsilon \\
+		10 & \qquad\qquad\qquad d\gets2d                                                                                                                                                                          \\
+		11 & \qquad\qquad x_0\gets x_0-\frac{f(x_0)}{d\cdot f'(x_0)}                                                                                                                                              \\
+		12 & \qquad\textbf{return }x_0\textit{ // not converged}                                                                                                                                                  \\
+	\end{array}
+$$
+
+\subsection{线性方程组的消元法}
+这里我们只用$O(n^3)$复杂度的暴力法实现选择列主元的高斯消元法。
+
+\paragraph{算法步骤}
+$$
+	\begin{array}{rl}
+		1  & \textbf{function }gaussian\_elimination(a,b)\textit{ // a,b are both matrix} \\
+		2  & \qquad (r,c)\gets a.size()                                                   \\
+		3  & \qquad\textbf{for }i\in\N\cap[0,r)                                           \\
+		4  & \qquad\qquad p\gets\argmax_{j\in[i,r)}|a_{j,i}|\textit{ // column pivoting}  \\
+		5  & \qquad\qquad\textbf{if }p\neq i                                              \\
+		6  & \qquad\qquad\qquad swap(a_{i,*},a_{p,*})                                     \\
+		7  & \qquad\qquad\qquad swap(b_{i,*},b_{p,*})                                     \\
+		8  & \qquad\qquad\textbf{for }j\in\N\cap[i+1,r)                                   \\
+		9  & \qquad\qquad\qquad\qquad m\gets\frac{a_{j,i}}{a_{i,i}}                       \\
+		10 & \qquad\qquad\qquad\qquad\textbf{for }k\in\N\cap[i,c)                         \\
+		11 & \qquad\qquad\qquad\qquad\qquad a_{j,k}\gets a_{j,k}-m\cdot a_{i,k}           \\
+		12 & \qquad\qquad\qquad\qquad\textbf{for }k\in\N\cap[0,b.size()_1)                \\
+		13 & \qquad\qquad\qquad\qquad\qquad b_{j,k}\gets b_{j,k}-m\cdot b_{i,k}           \\
+		14 & \qquad x\gets0_{c\times b.size()_1}                                          \\
+		15 & \qquad\textbf{for }i\textbf{ in }r-1,\dots,0                                 \\
+		16 & \qquad\qquad\textbf{for }k\in\N\cap[0,b.size()_1)                            \\
+		17 & \qquad\qquad\qquad sum\gets b_{i,k}                                          \\
+		18 & \qquad\qquad\qquad\textbf{for }j\in\N\cap[i+1,c)                             \\
+		19 & \qquad\qquad\qquad\qquad sum\gets sum - a_{i,j}\cdot x_{j,k}                 \\
+		20 & \qquad\qquad\qquad x_{i,k}\gets\frac{sum}{a_{i,i}}                           \\
+		21 & \qquad\textbf{return }x                                                      \\
+	\end{array}
+$$
+
+\section{实验过程}
+其实我不太清楚实验过程要写什么，
+毕竟无非就是写代码，
+然后运行，
+然后修错误。
+我就大概讲一下我的项目设计罢。
+
+\subsection{关于工具的选择}
+如果说我的自然语言母语是汉语的话，
+我的编程语言母语应该是C++。
+但这也更让我清楚C++的弊端——
+混乱的包管理。
+作为一个数值计算项目，
+我不想浪费时间在配置各种库上，
+所以我没有选择C++。
+
+在我看来，
+我在这个项目中选择蟒蛇（Python）语言，
+有以下几个优势：
+\begin{itemize}
+	\item 极其方便的包管理
+	\item 更贴近数学表达的语法
+	\item 丰富的数值计算
+	      （当然，
+	      我们要实现算法，
+	      就不能调用现成的函数，
+	      不过类似\texttt{numpy.ndarray}这样的的工具类可以为我节省时间）
+	      与可视化库。
+\end{itemize}
+劣势当然也有，
+例如令我极度反感的动态类型机制。
+但是没办法，
+我只能忍受。
+总的来说，
+使用蟒蛇是利大于弊的。
+
+可视化也有多种选择，
+例如传统的\texttt{matplotlib}库，
+工业化的\texttt{pyQt}库，
+以及可以做非常漂亮的动画的、深受科普工作者喜爱的\texttt{manim}库等。
+我最终选择了\texttt{matplotlib}，
+因为它在保持易用性的同时，
+提供了足够使用的功能。
+
+\subsection{基本结构}
+分离求解器与可视化模块，
+使得两者可以独立开发与维护。
+前者负责实现各种数值计算方法，
+而后者负责展示计算过程与结果。
+
+在项目中，
+我将求解器都放\texttt{solvers}包中，
+可视化模块放在\texttt{visualizers}包中。
+
+\subsection{求解器与可视化之间的交互设计}
+每个求解器中都有一个\texttt{SolutionTrace}对象，
+它包括以下三方面信息：
+\begin{itemize}
+	\item 一个\texttt{Step}对象的列表，
+	      记录每次迭代的信息。
+	\item 最终结果。
+	\item 是否收敛。
+\end{itemize}
+将\texttt{Step}作为保存各次迭代的信息的基类，
+在各个求解器文件中定义继承自\texttt{Step}的派生类，
+保存该求解器特有的迭代信息。
+采用这种方式，
+可以统一各个求解器的迭代信息存储格式，
+提高代码的可维护性和可扩展性。
+
+\subsection{可视化器的的设计}
+在开发过程中，
+我注意到随着迭代次数的增加，
+估计值越来越接近真实值，
+图像中的点越来越集中在某个区域，
+从而导致图像难以观察。
+为了结果的美观，
+我让可视化器会绘制左右两个子图，
+左图中显示全局视图，
+而右图会放大左图中的焦点部分（用一个虚线矩形框出），
+以便更清晰地观察迭代过程。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.75\textwidth]{./global_zoom_demo.png}
+	\caption{可视化界面示意图（实际上是运行二分法的动画截图）}
+\end{figure}
+
+采用工厂模式（factory pattern），
+使得可视化器的构造函数可以根据不同的求解器类型生成相应的可视化器实例。
+
+\subsection{用户交互设计}
+我最提倡的方式是直接将本项目作为一个包使用。
+用户可以在蟒蛇脚本或者交互式环境中导入本项目，
+自行定义求解函数和调用可视化器。
+
+不过为了方便用户使用，
+我还是实现了简单的命令行交互（CLI），
+通过蟒蛇语言自带的\texttt{eval}和\texttt{exec}函数来解析输入的表达式。
+不过由于这并非课程重点，
+所以功能相当有限，
+而且很容易注入攻击。
+
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./cli_demo.png}
+	\caption{命令行交互示意图}
+\end{figure}
+
+\section{实验结果与分析}
+下面给出各个求解器的示例输入输出。
+其中最引起我兴趣的是Newton法和Newton下山法，
+因为通过可视化可以清晰观察到它们在极值附近“扭动挣扎”，
+最终逃脱并收敛到真正的零点。
+
+\subsection{二分法}
+\subsubsection{输入}
+我们用二分法求方程$-0.1\exp(x)+4\sin(2x+3)+0.05*x^3+2*x+1=0$在区间$(0.5,3)$内的一个零点，
+要求精度达到$10^{-3}$。
+
+\subsubsection{输出}
+可以看到，
+在$10$次迭代后，
+算法得到了正确的结果$x\approx1.1909$。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./bisection_iterations.png}
+	\caption{二分法迭代过程}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./bisection_visualization.png}
+	\caption{二分法可视化动画截图}
+\end{figure}
+
+\subsection{Aitken加速收敛法}
+\subsubsection{输入}
+不妨选择课本上的一道课后习题：
+用Aitken法求方程$x^3-x^2-1=0$在$1.5$附近的根，
+取精度为$10^{-4}$。
+
+\subsubsection{输出}
+经过$3$次迭代，
+算法成功收敛到了$x\approx1.46557$。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./aitken_iterations.png}
+	\caption{Aitken加速收敛法迭代过程}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./aitken_visualization.png}
+	\caption{Aitken加速收敛法可视化动画截图}
+\end{figure}
+
+\subsection{Newton法}
+\subsubsection{输入}
+用Newton迭代法求方程$2\sin(x+4)+0.05x^2-x=0$在$2$附近的一个根。
+精度同样设置为$10^{-3}$。
+
+\subsubsection{输出}
+这个函数对Newton迭代法其实是很不友好的，
+它在零点附近比较剧烈地起伏波动。
+一方面，
+极值点会困住$x$，
+它依赖极值点附近的接近$0$的导数值来逃离；
+另一方面，
+过大的跳跃又会让$x$跳过零点，
+在两侧来回反复。
+不过幸运的是，经过多达$52$次迭代后，
+我们的算法还是成功收敛到了一个根$x\approx-0.5642$。
+通过动画，
+我们可以清晰看到$x$如何被困住又逃脱，
+逃脱又困住，
+“一山放出一山拦”；
+也可以看到$x$是怎样多次错过零点，
+最终才成功收敛的。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./newton_iterations.png}
+	\caption{Newton法迭代过程}
+\end{figure}
+\begin{figure}[H]
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_escape_1.png}
+		\caption*{左右腾挪}
+	\end{minipage}
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_escape_2.png}
+		\caption*{左右腾挪}
+	\end{minipage}
+	\\
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_escape_3.png}
+		\caption*{步幅增大}
+	\end{minipage}
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_escape_4.png}
+		\caption*{成功逃脱}
+	\end{minipage}
+	\caption{Newton法-逃离极值点}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./newton_skip.png}
+	\caption{Newton法-错过零点}
+\end{figure}
+
+\subsection{Newton下山法}
+\subsubsection{输入}
+我们用和普通的Newton迭代法一样的输入，
+即$2\sin(x+4)+0.05x^2-x=0$，
+初值设为$2$
+精度设为$10^{-3}$。
+
+\subsubsection{输出}
+Newton下山法仅用$9$次迭代就成功收敛到了$x\approx-0.5643$，
+相比于普通的Newton迭代法的$52$次迭代，
+显著提高了收敛速度。
+观察动画，
+我们可以看到，
+$x$仍然会在极值点附近挣扎，
+而且由于步长调节，
+其跃出极值点的速度更慢，
+但避免因为过大的步长而跳过零点，
+从而更快地收敛。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./newton_downhill_iterations.png}
+	\caption{Newton下山法迭代过程}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.9\textwidth]{./newton_downhill_escape.png}
+	\caption{Newton下山法-受$\lambda$调节的逃离极值点}
+\end{figure}
+\begin{figure}[H]
+	\centering
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_downhill_key_step.png}
+		\caption*{走向零点的关键一步}
+	\end{minipage}
+	\begin{minipage}{0.45\textwidth}
+		\centering
+		\includegraphics[width=\textwidth]{./newton_downhill_convergence.png}
+		\caption*{成功收敛}
+	\end{minipage}
+	\caption{Newton下山法-最后两步}
+\end{figure}
+
+\subsection{高斯消元法}
+\subsubsection{输入}
+我们用高斯消元法求解以下线性方程组：
+$$
+	\begin{bmatrix}
+		10  & -19 & -2 \\
+		-20 & 40  & 1  \\
+		1   & 4   & 5
+	\end{bmatrix}
+	\begin{bmatrix}
+		x_1 & y_1 \\
+		x_2 & y_2 \\
+		x_3 & y_3
+	\end{bmatrix}
+	=
+	\begin{bmatrix}
+		3 & 1 \\
+		4 & 2 \\
+		5 & 3
+	\end{bmatrix}
+$$
+
+\subsubsection{输出}
+高斯消元实在是非常代数的东西，
+所以我就没有做可视化。
+下面展示的是求解过程，
+可以看到六个未知数均获得了正确的解。
+\begin{figure}[H]
+	\centering
+	\includegraphics[width=0.6\textwidth]{./gaussian_elimination.png}
+	\caption{高斯消元法求解过程}
+\end{figure}
+
+
+\section{实验总结}
+\subsection{一元方程的迭代解法}
+通过本次实验，
+我加深了对各种一元方程迭代解法的理解。
+尤其是通过可视化，
+我能够直观地观察到各个方法的迭代过程，
+从而更好地理解它们的收敛性和适用范围。
+
+二分法作为一种简单而有效的方法，
+在函数连续且易于找到有根区间的情况下表现出色。
+它对于函数性质要求很低，
+只是找到有根区间本身也不是容易的事情。
+
+Aitken加速收敛法对函数的要求较高，
+我尝试的许多函数都无法收敛。
+对于能够收敛的函数，
+它的收敛速度非常快——
+不过这也可能是因为这些函数本身性质就非常好。
+
+Newton法和Newton下山法在处理复杂函数时表现出色。
+即便我给出了对它们很不利的函数和初值，
+他们仍然顽强地挣扎，
+最终成功收敛到正确的结果，
+令我赞叹不已。
+
+\subsection{线性方程组的消元法}
+通过实现高斯消元法，
+我加深了对线性方程组求解方法的理解。
+虽然高斯消元法的时间复杂度较高，
+但它非常契合人类的思维方式，
+而且作为一种基础的求解方法，
+在小规模和对精度要求高的问题中仍然具有实用价值，
+毕竟它是没有方法误差的。
+
+\subsection{其他方面的一些思考}
+本次实验也是对我编程能力的一次锻炼。
+数值计算方法的算法比较清晰，
+实现起来相对直接；
+但可视化实在搞得我很烦躁。
+数值算法基本上是我手搓的，
+但我必须承认可视化器代码中包含大量经过我修改调整的AI生成代码。
+
+编程中也遇到不少阻挠，
+例如对蟒蛇语言本身性质不熟悉导致各种神秘错误。
+我讨厌动态类型语言，
+静态检查能过不代表运行时不报错，
+运行时不报错的代码可能静态检查不通过，
+烦人。
+代码高亮也很差。
+
+此外，
+我的代码没有考虑超出定义域的情况，
+所有的求解过程都是假定函数的定义域足够大的条件下进行的。
+如果输入的函数包含$\log$之类的表达式，
+很容易就会报\texttt{MathDomainError}而爆炸。
+这使我越发敬佩编写\texttt{numpy}、\texttt{scipy}等库的大佬们了。
+
+\end{document}

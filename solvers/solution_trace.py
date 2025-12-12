@@ -22,5 +22,6 @@ class SolutionTrace:
         print("Solution Trace:")
         for step in self.steps:
             print("\t", step, sep="")
-        print(f"Final Result: {self.final_result}")
+        print("Final Result:")
+        print(self.final_result)
         print(f"Has Converged: {self.has_converged}")
