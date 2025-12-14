@@ -993,7 +993,7 @@ Crout分解法用于三对角矩阵（$\forall i,j\in\N\cap[1,n]\ ((a_{i,j}\neq0
 	l_{i,i}=a_{i,i}-l_{i,i-1}u_{i-1,i}\ (i\in\N^*,\ i\leq n)\\
 	l_{i+1,i}=a_{i+1,i}\ (i\in\N^*,\ i<n)\\
 	u_{i,i+1}=\frac{a_{i,i+1}}{l_{i,i}}\ (i\in\N^*,\ i<n)\\
-	c_i=\frac{b_i-l_{i,i-1}c_{i-1}}{l_{i,i}}\ (i\in\N^*,\ i\leq n),
+	c_i=\frac{b_i-l_{i,i-1}c_{i-1}}{l_{i,i}}\ (i\in\N^*,\ i\leq n),\\
 	x_i=c_i-u_{i,i+1}x_{i+1}\ (i\in\N^*,\ i\leq n),
 \end{gather*}
 其中下标越界的数都用$0$代替。
@@ -2185,7 +2185,7 @@ $$
 然后在节点处分别求值，
 结果就是
 $$
-\int_{-1}^{1}f(x)\d x\approx\sum_{i=1}^{n}c_if(x_i).
+	\int_{-1}^{1}f(x)\d x\approx\sum_{i=1}^{n}c_if(x_i).
 $$
 
 与其他方法比较，
